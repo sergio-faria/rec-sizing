@@ -41,7 +41,7 @@ def run_pre_collective_pool_milp(backpack: BackpackCollectivePoolDict) \
 			#meter_id: {
 				'l_buy': an array with the opportunity costs for buying energy from the retailer
 				'l_sell': an array with the opportunity costs for selling energy to the retailer
-				'l_cont': a float representing the the contracted power tariff of the meter, adjusted to one day
+				'l_cont': a float representing the contracted power tariff of the meter, adjusted to one day
 				'l_gic': a float representing the investment cost for additional RES installation in the meter,
 				adjusted to one day
 				'l_bic': a float representing the investment cost for additional storage installation in the meter,
