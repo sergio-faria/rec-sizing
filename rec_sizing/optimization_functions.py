@@ -43,9 +43,9 @@ def run_pre_collective_pool_milp(backpack: BackpackCollectivePoolDict) \
 				'l_sell': an array with the opportunity costs for selling energy to the retailer, in €/kWh
 				'l_cont': a float representing the contracted power tariff of the meter, adjusted to one day, in €/kW.day
 				'l_gic': a float representing the investment cost for additional RES installation in the meter,
-				adjusted to one day, in €/kW.day
+				adjusted to one day, in €/kW.day, i.e., €/kW / nr. of days in the considered panel's lifespan
 				'l_bic': a float representing the investment cost for additional storage installation in the meter,
-				adjusted to one day, in €/kW.day
+				adjusted to one day, in €/kW.day, i.e., €/kW / nr. of days in the considered battery's lifespan
 				'e_c': an array with the forecasted energy consumption behind the meter, in kWh
 				'p_meter_max': a float with the maximum capacity the meter can safely handle, in kW
 				'p_gn_init': a float with te initial installed RES generation capacity at the meter, in kW
