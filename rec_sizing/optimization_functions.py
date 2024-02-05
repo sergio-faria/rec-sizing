@@ -47,7 +47,7 @@ def run_pre_collective_pool_milp(backpack: BackpackCollectivePoolDict) \
 				'l_bic': a float representing the investment cost for additional storage installation in the meter,
 				adjusted to one day
 				'e_c': an array with the forecasted energy consumption behind the meter, in kWh
-				'p_meter_max': a float with the maximum capacity the meter can safely handle
+				'p_meter_max': a float with the maximum capacity the meter can safely handle, in kW
 				'p_gn_init': a float with te initial installed RES generation capacity at the meter, in kW
 				'e_g_factor': an array with the RES generation profile factor for the meter's location
 				'p_gn_min': a float representing the minimum RES capacity to be installed at the meter
