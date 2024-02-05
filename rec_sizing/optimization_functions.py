@@ -39,22 +39,22 @@ def run_pre_collective_pool_milp(backpack: BackpackCollectivePoolDict) \
 		'meters' : structure with information relative to each meter
 		{
 			#meter_id: {
-				'l_buy': an array with the opportunity costs for buying energy from the retailer
-				'l_sell': an array with the opportunity costs for selling energy to the retailer
+				'l_buy': an array with the opportunity costs for buying energy from the retailer, in €/kWh
+				'l_sell': an array with the opportunity costs for selling energy to the retailer, in €/kWh
 				'l_cont': a float representing the contracted power tariff of the meter, adjusted to one day, in €/kW.day
 				'l_gic': a float representing the investment cost for additional RES installation in the meter,
-				adjusted to one day
+				adjusted to one day, in €/kW.day
 				'l_bic': a float representing the investment cost for additional storage installation in the meter,
-				adjusted to one day
+				adjusted to one day, in €/kW.day
 				'e_c': an array with the forecasted energy consumption behind the meter, in kWh
 				'p_meter_max': a float with the maximum capacity the meter can safely handle, in kW
 				'p_gn_init': a float with te initial installed RES generation capacity at the meter, in kW
 				'e_g_factor': an array with the RES generation profile factor for the meter's location
-				'p_gn_min': a float representing the minimum RES capacity to be installed at the meter
-				'p_gn_max': a float representing the maximum RES capacity to be installed at the meter
+				'p_gn_min': a float representing the minimum RES capacity to be installed at the meter, in kW
+				'p_gn_max': a float representing the maximum RES capacity to be installed at the meter, in kW
 				'e_bn_init': a float with te initial installed storage capacity at the meter, in kW
-				'e_bn_min': a float representing the minimum storage to be installed at the meter
-				'e_bn_max': a float representing the maximum storage to be installed at the meter
+				'e_bn_min': a float representing the minimum storage capacity to be installed at the meter, in kWh
+				'e_bn_max': a float representing the maximum storage capacity to be installed at the meter, in kWh
 				'soc_min': a percentage, applicable to "e_bn", identifying a minimum limit to the energy content
 				'eff_bc': a fixed value, between 0 and 1, that expresses the charging efficiency of the BESS
 				'eff_bd': a fixed value, between 0 and 1, that expresses the discharging efficiency of the BESS
