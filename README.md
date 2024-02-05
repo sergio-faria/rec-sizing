@@ -66,5 +66,5 @@ install the library by using:
     ```
 - to import the library use:
     ```shell
-    import rec_op_lem_prices as rolp
+    import rec_sizing as rs
     ```
