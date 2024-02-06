@@ -499,7 +499,7 @@ class CollectiveMILPPool:
 			self.milp.setSolver(pulp.PULP_CBC_CMD(msg=False, timeLimit=self.timeout, gapRel=self.mipgap))
 
 		elif self.solver == 'CPLEX' and 'CPLEX_CMD' in listSolvers(onlyAvailable=True):
-			self.milp.setSolver(CPLEX_CMD(msg=False, timeLimit=self.timeout, mip=self.mipgap))
+			self.milp.setSolver(CPLEX_CMD(msg=True, timeLimit=self.timeout, gapRel=self.mipgap))
 
 		else:
 			raise ValueError(f'{self.solver}_CMD not available in puLP; '
