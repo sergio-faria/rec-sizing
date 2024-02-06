@@ -25,13 +25,14 @@ from rec_sizing.custom_types.collective_milp_pool_types import (
 )
 from loguru import logger
 from pulp import (
+	CPLEX_CMD,
+	listSolvers,
 	LpBinary,
 	LpMinimize,
 	LpProblem,
 	LpStatus,
 	lpSum,
 	LpVariable,
-	GUROBI_CMD,
 	pulp,
 	value
 )
@@ -494,15 +495,15 @@ class CollectiveMILPPool:
 		self.milp.writeLP(lp_file)
 
 		# Set the solver to be called
-		if self.solver == 'CBC':
+		if self.solver == 'CBC' and 'CBC_CMD' in listSolvers(onlyAvailable=True):
 			self.milp.setSolver(pulp.PULP_CBC_CMD(msg=False, timeLimit=self.timeout, gapRel=self.mipgap))
 
-		elif self.solver == 'GUROBI':
-			# self.milp.setSolver(pulp.GUROBI_CMD(msg=True, timeLimit=self.timeout, mip=self.mipgap))
-			self.milp.setSolver(GUROBI_CMD(msg=False))
+		elif self.solver == 'CPLEX' and 'CPLEX_CMD' in listSolvers(onlyAvailable=True):
+			self.milp.setSolver(CPLEX_CMD(msg=False, timeLimit=self.timeout, mip=self.mipgap))
 
 		else:
-			raise ValueError
+			raise ValueError(f'{self.solver}_CMD not available in puLP; '
+			                 f'please install the required solver or try a different one')
 
 		logger.debug('-- defining the collective (pool) MILP problem... DONE!')
 
@@ -693,7 +694,7 @@ class CollectiveMILPPool:
 			outputs['c_ind2pool'][n] = round(c_ind_array, 3)
 
 		# Also retrieve the slack values of the "Market Equilibrium" constraints. These can be considered as the
-		# "optimal" market prices whenever "Stage_1_cost_" constraints are not active, otherwise they are 0.
+		# "optimal" market prices.
 		dual_prices = \
 			[abs(self.milp.constraints[c].pi) for c in self.milp.constraints if c.startswith('Market_equilibrium_')]
 		outputs['dual_prices'] = [round(dp, 4) for dp in dual_prices]

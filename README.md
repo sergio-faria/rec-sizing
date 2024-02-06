@@ -66,5 +66,5 @@ install the library by using:
     ```
 - to import the library use:
     ```shell
-    import rec_sizing as rs
+    from rec_sizing.optimization_functions import run_pre_collective_pool_milp as sizing
     ```

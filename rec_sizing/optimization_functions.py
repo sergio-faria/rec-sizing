@@ -1,6 +1,11 @@
 import multiprocessing as mp
 
 from rec_sizing.optimization.module.CollectiveMILPPool import CollectiveMILPPool
+from rec_sizing.configs.configs import (
+	MIPGAP,
+	SOLVER,
+	TIMEOUT
+)
 from rec_sizing.custom_types.collective_milp_pool_types import (
 	BackpackCollectivePoolDict,
 	OutputsCollectivePoolDict
@@ -9,7 +14,7 @@ from joblib import Parallel, delayed
 from loguru import logger
 
 
-def run_pre_collective_pool_milp(backpack: BackpackCollectivePoolDict) \
+def run_pre_collective_pool_milp(backpack: BackpackCollectivePoolDict, solver=SOLVER, timeout=TIMEOUT, mipgap=MIPGAP) \
 		-> OutputsCollectivePoolDict:
 	"""
 	Use this function to compute a standalone collective MILP for a given renewable energy community (REC) or citizens
@@ -62,6 +67,12 @@ def run_pre_collective_pool_milp(backpack: BackpackCollectivePoolDict) \
 			}
 		}
 	}
+	:param solver: a string with the solver chosen for the MILP. For the meantime, the library accepts the values "CBC"
+	and "CPLEX", with any other string passed being defaulted to "CBC", with a warning. Since CPLEX is a commercial
+	solver, the library uses a cplex dependency (https://pypi.org/project/cplex/) based on a Community Edition.
+	:param timeout: an integer representing a temporal limit for the solver to find an optimal solution (s)
+	:param mipgap: a float for controlling the solver's tolerance; intolerant [0 - 1] fully permissive; any value
+	outside this range will be reverted to the default 0.01, with a warning.
 	:return: {
 		'c_ind2pool': dict of floats with the individual costs with energy for the optimization horizon, in €;
 			positive values are costs, negative values are profits
@@ -100,8 +111,29 @@ def run_pre_collective_pool_milp(backpack: BackpackCollectivePoolDict) \
 	"""
 	logger.info('Running a pre-delivery standalone/second stage collective (pool) MILP...')
 
-	milp = CollectiveMILPPool(backpack)
+	if solver not in ['CBC', 'CPLEX']:
+		logger.warning(f'solver = {solver} not recognized; reverting to {SOLVER}')
+		solver = SOLVER
+	if timeout < 0:
+		logger.warning(f'timeout < 0; reverting to default {TIMEOUT}')
+		timeout = TIMEOUT
+	if mipgap < 0:
+		logger.warning(f'mipgap < 0; reverting to default {MIPGAP}')
+		mipgap = MIPGAP
+	elif mipgap > 1:
+		logger.warning(f'mipgap > 1; reverting to default {MIPGAP}')
+		mipgap = MIPGAP
+
+	logger.info(' - defining MILP -')
+	milp = CollectiveMILPPool(backpack, solver, timeout, mipgap)
+
+	nr_days = backpack.get('nr_days')
+	logger.info(f' - MILP set with an horizon of {nr_days} days, mipgap={mipgap}, timeout={timeout}, solver={solver} -')
+
+	logger.info(' - solving MILP -')
 	milp.solve_milp()
+
+	logger.info(' - generating outputs -')
 	results = milp.generate_outputs()
 
 	logger.info('Running a pre-delivery standalone/second stage collective (pool) MILP... DONE!')
