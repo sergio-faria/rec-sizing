@@ -495,7 +495,7 @@ class CollectiveMILPPool:
 		self.milp.writeLP(lp_file)
 
 		# Set the solver to be called
-		if self.solver == 'CBC' and 'CBC_CMD' in listSolvers(onlyAvailable=True):
+		if self.solver == 'CBC' and 'PULP_CBC_CMD' in listSolvers(onlyAvailable=True):
 			self.milp.setSolver(pulp.PULP_CBC_CMD(msg=False, timeLimit=self.timeout, gapRel=self.mipgap))
 
 		elif self.solver == 'CPLEX' and 'CPLEX_CMD' in listSolvers(onlyAvailable=True):
