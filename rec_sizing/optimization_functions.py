@@ -69,7 +69,8 @@ def run_pre_collective_pool_milp(backpack: BackpackCollectivePoolDict, solver=SO
 	}
 	:param solver: a string with the solver chosen for the MILP. For the meantime, the library accepts the values "CBC"
 	and "CPLEX", with any other string passed being defaulted to "CBC", with a warning. Since CPLEX is a commercial
-	solver, the library uses a cplex dependency (https://pypi.org/project/cplex/) based on a Community Edition.
+	solver, you will need to install it with, for example, a Communidty Edition license
+	(https://www.ibm.com/docs/en/icos/20.1.0?topic=cplex-setting-up-python-api).
 	:param timeout: an integer representing a temporal limit for the solver to find an optimal solution (s)
 	:param mipgap: a float for controlling the solver's tolerance; intolerant [0 - 1] fully permissive; any value
 	outside this range will be reverted to the default 0.01, with a warning.

@@ -179,7 +179,7 @@ class CollectiveMILPPool:
 		# Define the decision variables as puLP objets
 		if self.total_share_coeffs:
 			for t in self.time_series:
-				increment = f't{t:03d}'
+				increment = f't{t:07d}'
 				delta_rec_balance[t] = LpVariable('delta_rec_balance_' + increment, cat=LpBinary)
 
 		for n in self.set_meters:
@@ -192,7 +192,7 @@ class CollectiveMILPPool:
 
 		t_n_series = itertools.product(self.set_meters, self.time_series)  # iterates over each Meter and each time step
 		for n, t in t_n_series:
-			increment = f'{n}_t{t:03d}'
+			increment = f'{n}_t{t:07d}'
 			e_cmet[n][t] = LpVariable('e_cmet_' + increment)
 			e_g[n][t] = LpVariable('e_g_' + increment, lowBound=0)
 			e_bc[n][t] = LpVariable('e_bc_' + increment, lowBound=0)
@@ -233,7 +233,7 @@ class CollectiveMILPPool:
 
 		# Eq. 2-35: Constraints
 		for t in self.time_series:
-			increment = f'{t:03d}'
+			increment = f'{t:07d}'
 
 			# Eq. 19
 			self.milp += \
@@ -288,7 +288,7 @@ class CollectiveMILPPool:
 				'Max_new_storage_' + increment
 
 		for n, t in itertools.product(self.set_meters, self.time_series):
-			increment = f'{n}_t{t:03d}'
+			increment = f'{n}_t{t:07d}'
 
 			# Eq. 2
 			self.milp += \
@@ -606,8 +606,8 @@ class CollectiveMILPPool:
 				outputs['e_bn_total'][n] = v.varValue
 
 			else:
-				step_nr = int(v.name[-3:])
-				v_name_reduced = v.name[:-5]  # var name without step_nr, i.e., without "_t000"
+				step_nr = int(v.name[-7:])
+				v_name_reduced = v.name[:-9]  # var name without step_nr, i.e., without "_t0000000"
 
 				if re.search(f'delta_rec_balance_', v.name):
 					outputs['delta_rec_balance'][step_nr] = v.varValue
