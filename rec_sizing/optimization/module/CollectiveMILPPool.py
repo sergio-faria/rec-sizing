@@ -241,12 +241,12 @@ class CollectiveMILPPool:
 				'Market_equilibrium_' + increment
 
 			if self.total_share_coeffs:
-				# Eq. 33
+				# Eq. 27
 				self.milp += \
 					lpSum(e_cmet[n][t] for n in self.set_meters) >= - self._big_m * delta_rec_balance[t], \
 					'Check_REC_surplus_' + increment
 
-				# Eq. 34
+				# Eq. 28
 				self.milp += \
 					lpSum(e_cmet[n][t] for n in self.set_meters) <= self._big_m * (1 - delta_rec_balance[t]), \
 					'Check_REC_deficit_' + increment
@@ -376,114 +376,77 @@ class CollectiveMILPPool:
 				e_sur[n][t] <= self._big_m * (1 - delta_sup[n][t]), \
 				'Supply_OFF_' + increment
 
-			if self._l_grid[t] >= 0:
-				# Eq. 21
-				self.milp += \
-					e_consumed[n][t] >= e_cmet[n][t], \
-					'Consumption_' + increment
+			# Eq. 21
+			self.milp += \
+				e_consumed[n][t] >= e_cmet[n][t], \
+				'Consumption_' + increment
 
-				# Eq. 22
-				self.milp += \
-					e_alc[n][t] >= e_pur[n][t] - e_sale[n][t], \
-					'Allocated_energy_' + increment
+			# Eq. 22
+			self.milp += \
+				e_alc[n][t] >= e_pur[n][t] - e_sale[n][t], \
+				'Allocated_energy_' + increment
 
-				# Eq. 23
-				self.milp += \
-					e_slc[n][t] >= e_consumed[n][t] - self._big_m * (1 - delta_slc[n][t]), \
-					'Self_consumption_1_' + increment
+			# Eq. 23
+			self.milp += \
+				e_slc[n][t] >= e_consumed[n][t] - self._big_m * (1 - delta_slc[n][t]), \
+				'Self_consumption_1_' + increment
 
-				# Eq. 24
-				self.milp += \
-					e_slc[n][t] >= e_alc[n][t] - self._big_m * delta_slc[n][t], \
-					'Self_consumption_2_' + increment
+			# Eq. 24
+			self.milp += \
+				e_slc[n][t] >= e_alc[n][t] - self._big_m * delta_slc[n][t], \
+				'Self_consumption_2_' + increment
 
-				# Eq. aux
-				self.milp += \
-					delta_cmet[n][t] == 0, \
-					'Consumption_bin_' + increment
+			# Eq. aux
+			self.milp += \
+				delta_cmet[n][t] == 0, \
+				'Consumption_bin_' + increment
 
-				# Eq. aux
-				self.milp += \
-					delta_alc[n][t] == 0, \
-					'Allocated_energy_bin_' + increment
-
-			else:
-				# Eq. 25
-				self.milp += \
-					e_consumed[n][t] <= e_cmet[n][t] + self._big_m * delta_cmet[n][t], \
-					'Consumption_1_' + increment
-
-				# Eq. 26
-				self.milp += \
-					e_consumed[n][t] <= self._big_m * (1 - delta_cmet[n][t]), \
-					'Consumption_2_' + increment
-
-				# Eq. 27
-				self.milp += \
-					e_alc[n][t] <= e_pur[n][t] - e_sale[n][t] + self._big_m * delta_alc[n][t], \
-					'Allocated_energy_1_' + increment
-
-				# Eq. 28
-				self.milp += \
-					e_alc[n][t] <= self._big_m * (1 - delta_alc[n][t]), \
-					'Allocated_energy_2_' + increment
-
-				# Eq. 29
-				self.milp += \
-					e_slc[n][t] <= e_consumed[n][t], \
-					'Self_consumption_1_' + increment
-
-				# Eq. 30
-				self.milp += \
-					e_slc[n][t] <= e_alc[n][t], \
-					'Self_consumption_2_' + increment
-
-				# Eq. aux
-				self.milp += \
-					delta_slc[n][t] == 0, \
-					'Self_consumed_energy_bin_' + increment
+			# Eq. aux
+			self.milp += \
+				delta_alc[n][t] == 0, \
+				'Allocated_energy_bin_' + increment
 
 			if self.strict_pos_coeffs:
-				# Eq. 31
+				# Eq. 25
 				self.milp += \
 					e_sale[n][t] - e_pur[n][t] <= -e_cmet[n][t] + self._big_m * delta_coeff[n][t], \
 					'Positive_coefficients_1_' + increment
 
-				# Eq. 32
+				# Eq. 26
 				self.milp += \
 					e_sale[n][t] - e_pur[n][t] <= self._big_m * (1 - delta_coeff[n][t]), \
 					'Positive_coefficients_2_' + increment
 
 			if self.total_share_coeffs:
-				# Eq. 35
+				# Eq. 29
 				self.milp += \
 					e_cmet[n][t] >= - self._big_m * delta_meter_balance[n][t], \
 					'Check_meter_surplus_' + increment
 
-				# Eq. 36
+				# Eq. 30
 				self.milp += \
 					e_cmet[n][t] <= self._big_m * (1 - delta_meter_balance[n][t]), \
 					'Check_meter_deficit_' + increment
 
-				# Eq. 37
+				# Eq. 31
 				self.milp += \
 					e_sale[n][t] >= - e_cmet[n][t] - self._big_m * (
 								1 - delta_meter_balance[n][t] + delta_rec_balance[t]), \
 					'Share_all_surplus_low_' + increment
 
-				# Eq. 38
+				# Eq. 32
 				self.milp += \
 					e_sale[n][t] <= - e_cmet[n][t] + self._big_m * (
 								1 - delta_meter_balance[n][t] + delta_rec_balance[t]), \
 					'Share_all_surplus_high_' + increment
 
-				# Eq. 39
+				# Eq. 33
 				self.milp += \
 					e_pur[n][t] >= e_cmet[n][t] - self._big_m * (
 							1 - delta_rec_balance[t] + delta_meter_balance[n][t]), \
 					'Buy_all_deficit_low_' + increment
 
-				# Eq. 40
+				# Eq. 34
 				self.milp += \
 					e_pur[n][t] <= e_cmet[n][t] + self._big_m * (
 							1 - delta_rec_balance[t] + delta_meter_balance[n][t]), \
@@ -496,10 +459,27 @@ class CollectiveMILPPool:
 
 		# Set the solver to be called
 		if self.solver == 'CBC' and 'PULP_CBC_CMD' in listSolvers(onlyAvailable=True):
-			self.milp.setSolver(pulp.PULP_CBC_CMD(msg=False, timeLimit=self.timeout, gapRel=self.mipgap))
+			self.milp.setSolver(pulp.PULP_CBC_CMD(msg=True, timeLimit=self.timeout, gapRel=self.mipgap))
 
 		elif self.solver == 'CPLEX' and 'CPLEX_CMD' in listSolvers(onlyAvailable=True):
-			self.milp.setSolver(CPLEX_CMD(msg=True, timeLimit=self.timeout, gapRel=self.mipgap))
+			# for more info on some available parameters:
+			# https://www.ibm.com/docs/en/icos/22.1.1?topic=parameters-mip-emphasis-switch
+			# https://www.ibm.com/docs/en/icos/22.1.0?topic=parameters-feasibility-pump-switch
+			# https://www.ibm.com/docs/en/icos/20.1.0?topic=parameters-feasibility-tolerance
+			# https://www.ibm.com/docs/en/icos/12.9.0?topic=parameters-integrality-tolerance
+			# https://www.ibm.com/docs/en/icos/12.9.0?topic=parameters-scale-parameter
+			# setting options in cplex though puLP:
+			# https://www-eio.upc.es/lceio/manuals/cplex90/relnotescplex/relnotescplex10.html
+			# https://www-eio.upc.edu/lceio/manuals/cplex75/doc/refmanccpp/html/baseSystem.html
+			# background on "fixed mip" infeasibility over incumbent solution (for duals calculation):
+			# https://or.stackexchange.com/questions/6048/avoid-infeasibility-in-fixed-mip-problem-in-cplex
+			self.milp.setSolver(CPLEX_CMD(msg=True, timeLimit=self.timeout, gapRel=self.mipgap, options=[
+				'set emphasis mip 5',
+				# 'set mip strategy fpheur 2',
+				# 'set simplex tolerances feasibility 1e-9',
+				# 'set mip tolerances integrality 1e-9',
+				# 'set read scale -1'
+			]))
 
 		else:
 			raise ValueError(f'{self.solver}_CMD not available in puLP; '

@@ -1,4 +1,5 @@
 import multiprocessing as mp
+import numpy as np
 
 from rec_sizing.optimization.module.CollectiveMILPPool import CollectiveMILPPool
 from rec_sizing.configs.configs import (
@@ -115,15 +116,22 @@ def run_pre_collective_pool_milp(backpack: BackpackCollectivePoolDict, solver=SO
 	if solver not in ['CBC', 'CPLEX']:
 		logger.warning(f'solver = {solver} not recognized; reverting to {SOLVER}')
 		solver = SOLVER
+
 	if timeout < 0:
 		logger.warning(f'timeout < 0; reverting to default {TIMEOUT}')
 		timeout = TIMEOUT
+
 	if mipgap < 0:
 		logger.warning(f'mipgap < 0; reverting to default {MIPGAP}')
 		mipgap = MIPGAP
 	elif mipgap > 1:
 		logger.warning(f'mipgap > 1; reverting to default {MIPGAP}')
 		mipgap = MIPGAP
+
+	if backpack.get('l_grid') is not None:
+		if (np.array(backpack.get('l_grid')) < 0).any():
+			logger.warning(f'One or more l_grid < 0; those tariffs will be set to 0.0')
+			backpack['l_grid'] = [abs(tar) for tar in backpack['l_grid']]
 
 	logger.info(' - defining MILP -')
 	milp = CollectiveMILPPool(backpack, solver, timeout, mipgap)
