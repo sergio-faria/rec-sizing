@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from rec_sizing.optimization.module.CollectiveMILPPool import CollectiveMILPPool
 from rec_sizing.optimization.structures.I_O_collective_pool_milp import (
 	INPUTS_INSTALL_POOL,
@@ -8,8 +10,11 @@ from rec_sizing.optimization.structures.I_O_collective_pool_milp import (
 
 
 def test_solve_collective_pool_milp_no_install():
+	inputs = deepcopy(INPUTS_NO_INSTALL_POOL)
+	inputs['w_clustering'] = [1] * 3
+
 	# Assert the creation of a correct class
-	milp = CollectiveMILPPool(INPUTS_NO_INSTALL_POOL)
+	milp = CollectiveMILPPool(inputs)
 	assert isinstance(milp, CollectiveMILPPool)
 
 	# Assert the MILP is optimally solved
@@ -27,8 +32,11 @@ def test_solve_collective_pool_milp_no_install():
 
 
 def test_solve_collective_pool_milp_yes_install():
+	inputs = deepcopy(INPUTS_INSTALL_POOL)
+	inputs['w_clustering'] = [1] * 3
+
 	# Assert the creation of a correct class
-	milp = CollectiveMILPPool(INPUTS_INSTALL_POOL)
+	milp = CollectiveMILPPool(inputs)
 	assert isinstance(milp, CollectiveMILPPool)
 
 	# Assert the MILP is optimally solved
@@ -43,3 +51,8 @@ def test_solve_collective_pool_milp_yes_install():
 	results['dual_prices'] = [round(dp, 4) for dp in results['dual_prices']]
 	for ki, valu in results.items():
 		assert valu == OUTPUTS_INSTALL_POOL.get(ki), f'{ki}'
+
+
+if __name__ == '__main__':
+	test_solve_collective_pool_milp_no_install()
+	test_solve_collective_pool_milp_yes_install()

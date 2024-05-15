@@ -48,12 +48,12 @@ The tool is implemented as a Python library. To install the library in, for exam
     % cd /path/to/root_folder
     ```
 - create the wheel file that will allow you to install the repository as a Python library 
-(make sure you have previously installed Python >= 3.11 in your local computer / server);
+(make sure you have previously installed Python ~= 3.10 in your local computer / server);
 
     ```shell
     % python setup.py bdist_wheel
     ``` 
-- after creating your virtual environment and activating it
+- after creating your virtual environment with and activating it
     (see [this](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#activating-an-environment)
     example for conda environments), enter the newly created ```dist``` folder, copy the name of the ```.whl``` file and 
 install the library by using:
