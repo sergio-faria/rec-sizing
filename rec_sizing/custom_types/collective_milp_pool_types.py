@@ -54,8 +54,6 @@ class OutputsCollectivePoolDict(TypedDict):
 	e_consumed: ListPerId
 	e_alc: ListPerId
 	delta_slc: ListPerId
-	delta_cmet: ListPerId
-	delta_alc: ListPerId
 	delta_coeff: ListPerId
 	delta_rec_balance: list[float]
 	delta_meter_balance: ListPerId

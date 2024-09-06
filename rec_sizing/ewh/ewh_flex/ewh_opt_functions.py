@@ -1,6 +1,6 @@
-#############################################
-#        EWH Optimization Functions         #
-#############################################
+##############################################
+##        EWH Optimization Functions        ##
+##############################################
 import numpy as np
 import pandas as pd
 from pulp import *
@@ -15,12 +15,12 @@ from .auxiliary_functions import fillDefaults
 
 
 ##############################################
-#             Input Parameters               #
+##            Input Parameters              ##
 ##############################################
 def build_varBackpack(paramsInput, dataset):
 
     # default paramters if any are missing
-    paramsDefault = {
+    paramsDefault ={
         "user": "sample_user",
         "datetime_start": "2022-12-07T00:00:00.000Z",
         "datetime_end": "2022-12-13T23:59:00.000Z",
@@ -69,28 +69,28 @@ def build_varBackpack(paramsInput, dataset):
             ewh_power_original = 1800
         ewh_power = 0.9 * ewh_power_original/1000
 
-    # sufficiently big number for if-else constraints
+    ## sufficiently big number for if-else constraints
     bigNumber = 1E5
-    # EWH Dimensions (cm)
+    ## EWH Dimensions (cm)
     ewh_height = 100
-    # calculate radius (m)
+    ## calculate radius (m)
     ewh_radius = math.sqrt((ewh_capacity/1000)/((ewh_height/100)*np.pi))
-    # calculate area (m2)
+    ## calculate area (m2)
     ewh_area = 2 * np.pi * ewh_radius * (ewh_radius + ewh_height/100)
     # Specific heat capacity of water (4.186 J/g°C)
     waterHeatCap = 4.186
-    # overall heat transfer coefficient (kW/(m2*K))
+    ### overall heat transfer coefficient (kW/(m2*K))
     heatTransferCoeff = 0.00125
-    # Ambient Temperature (ºC)
+    ## Ambient Temperature (ºC)
     ambTemp = 20
-    # Inlet/network water temperature
+    ## Inlet/network water temperature
     temp_inlet = 20
     # EWH minimum allowed temperature
     ewh_min_temp = 0
     # EWH start-point temperature
     ewh_start_temp = 60
     # total flow rate
-    flow_rate_min = 8.5  # kg/min
+    flow_rate_min = 8.5  ## kg/min
     # Minimum allowable energy content of the prosumer’s EWH (kWh)
     wh_min = ewh_min_temp * ewh_capacity * waterHeatCap / 3600
     # Maximum allowable energy content of the prosumer’s EWH (kWh)
@@ -98,8 +98,8 @@ def build_varBackpack(paramsInput, dataset):
     # Total energy balance of prosumer’s EWH at the beginning (kWh)
     wh_init = ewh_start_temp * ewh_capacity * waterHeatCap / 3600
 
-    # create variable backpack for export
-    # noinspection PyDictCreation
+
+    ## create variable backpack for export
     varBackpack = {}
     # user id
     varBackpack['user'] = user
@@ -117,23 +117,23 @@ def build_varBackpack(paramsInput, dataset):
     varBackpack['ewh_std_temp'] = ewh_std_temp
     # Hot-Water Usage Comfort Temperature (minimum user-defined temperature - °C)
     varBackpack['tempSet'] = tempSet
-    # sufficiently big number for if-else constraints
+    ## sufficiently big number for if-else constraints
     varBackpack['bigNumber'] = bigNumber
-    # EWH Height (cm)
+    ## EWH Height (cm)
     varBackpack['ewh_height'] = ewh_height
-    # calculate radius (m)
+    ## calculate radius (m)
     varBackpack['ewh_radius'] = ewh_radius
-    # calculate area (m2)
+    ## calculate area (m2)
     varBackpack['ewh_area'] = ewh_area
     # Specific heat capacity of water (4.186 J/g°C)
     varBackpack['waterHeatCap'] = waterHeatCap
-    # overall heat transfer coefficient (kW/(m2*K))
+    ### overall heat transfer coefficient (kW/(m2*K))
     varBackpack['heatTransferCoeff'] = heatTransferCoeff
-    # Ambient Temperature (ºC)
+    ## Ambient Temperature (ºC)
     varBackpack['ambTemp'] = ambTemp
-    # Inlet/network water temperature
+    ## Inlet/network water temperature
     varBackpack['temp_inlet'] = temp_inlet
-    # Outlet flow rate
+    ## Outlet flow rate
     varBackpack['flow_rate_min'] = flow_rate_min
     # EWH minimum allowed temperature
     varBackpack['ewh_min_temp'] = ewh_min_temp
@@ -156,9 +156,9 @@ def build_varBackpack(paramsInput, dataset):
     return varBackpack
 
 
-#############################################
-#            15-min Resample                #
-#############################################
+##############################################
+##            15-min Resample               ##
+##############################################
 def resample_data(dataset, resolution='15m'):
 
     if resolution == '15m':
@@ -166,15 +166,13 @@ def resample_data(dataset, resolution='15m'):
     if resolution == '1h':
         resolution = '1H'
 
-    # Set the timestamp column as the index
+     # Set the timestamp column as the index
     _dataset = dataset.set_index('timestamp')
     # Resample the 'load' column to 15-minute/1h intervals and sum the values
     resampled_load = _dataset['load'].resample(resolution).sum()
-
     # function to resample delta_use to 15min/1h
     def calculate_ratio(series):
         return series.sum() / len(series)
-
     # Apply that function iteratively
     resampled_delta_use = _dataset['delta_use'].resample(resolution).apply(calculate_ratio)
     # Create a new DataFrame with the resampled values
@@ -189,7 +187,7 @@ def resample_data(dataset, resolution='15m'):
 
 
 ##############################################
-#            Additional Data                 #
+##            Additional Data               ##
 ##############################################
 def update_dataset_backpack(dataset, varBackpack):
 
@@ -210,7 +208,7 @@ def update_dataset_backpack(dataset, varBackpack):
     # check time resolution in minutes
     resolution = pd.Series(dataset['timestamp']).diff().mean().components.minutes
     # fail safe for 1h resampling
-    if pd.Series(dataset['timestamp']).diff().mean().components.hours == 1:
+    if (pd.Series(dataset['timestamp']).diff().mean().components.hours == 1):
         resolution = 60
     # calculate delta_t (ratio of resolution to the hour)
     delta_t = resolution / 60
@@ -234,14 +232,11 @@ def update_dataset_backpack(dataset, varBackpack):
     # total simulated days
     daySim = (dataset.timestamp.max()-dataset.timestamp.min()).days+1
 
-    # add price
+    ## add price
     dataset['price1'] = price_simple
-    dataset.loc[(dataset['timestamp'].dt.hour >= 0) & (dataset['timestamp'].dt.hour < 8), 'price2'] = \
-        price_dual_night
-    dataset.loc[(dataset['timestamp'].dt.hour >= 22) & (dataset['timestamp'].dt.hour <= 23), 'price2'] = \
-        price_dual_night
-    dataset.loc[(dataset['timestamp'].dt.hour >= 8) & (dataset['timestamp'].dt.hour < 22), 'price2'] = \
-        price_dual_day
+    dataset.loc[(dataset['timestamp'].dt.hour >= 0) & (dataset['timestamp'].dt.hour < 8), 'price2'] = price_dual_night
+    dataset.loc[(dataset['timestamp'].dt.hour >= 22) & (dataset['timestamp'].dt.hour <= 23), 'price2'] = price_dual_night
+    dataset.loc[(dataset['timestamp'].dt.hour >= 8) & (dataset['timestamp'].dt.hour < 22), 'price2'] = price_dual_day
 
     # create variables from dataset
     flow_rate = list(dataset.flow_rate)
@@ -282,7 +277,7 @@ def update_dataset_backpack(dataset, varBackpack):
 
 
 ##############################################
-#         Regressors (Linearization)         #
+##        Regressors (Linearization)        ##
 ##############################################
 def linear_regressors(original_dataset, varBackpack):
 
@@ -293,10 +288,10 @@ def linear_regressors(original_dataset, varBackpack):
     flow_rate_value = varBackpack['flow_rate_value']
     waterHeatCap = varBackpack['waterHeatCap']
     ewh_capacity = varBackpack['ewh_capacity']
-    delta_t = varBackpack['delta_t']
+    delta_t =  varBackpack['delta_t']
     delta_intervals = np.linspace(0, 1, int((delta_t*60)+1))
 
-    # -- Regressor 1 with temp_ewh ranging from setpoint to max
+    ### Regressor 1 with temp_ewh ranging from setpoint to max
     # unique values of temp_inlet
     temp_inlet = list(set(temp_inlet))
     # unique values of temp_heat
@@ -307,101 +302,55 @@ def linear_regressors(original_dataset, varBackpack):
     combinations = list(product(temp_inlet, temp_heat, delta_intervals))
     # Create a DataFrame for regressor
     regressor_aboveSet = pd.DataFrame(combinations, columns=['temp_inlet', 'temp_heat', 'delta_use'])
-    # add remaining variables
+    ## add remaining variables
     regressor_aboveSet['temp_set'] = tempSet
     regressor_aboveSet['flow_rate'] = flow_rate_value
-    # calculate ewh_flow via fluid mix formula
-    regressor_aboveSet['ewh_flow'] = (
-            regressor_aboveSet['flow_rate'] *
-            (regressor_aboveSet['temp_set'] - regressor_aboveSet['temp_inlet']) /
-            (regressor_aboveSet['temp_heat'] - regressor_aboveSet['temp_inlet'])
-    )
-    # calculate ewh output energy
-    regressor_aboveSet['w_out'] = (
-                                          regressor_aboveSet['ewh_flow'] *
-                                          regressor_aboveSet['delta_use'] *
-                                          waterHeatCap *
-                                          (regressor_aboveSet['temp_heat']) / 3600
-                                  ) * \
-                                  (60 * delta_t)
-    # calculate internal water energy
-    regressor_aboveSet['w_water'] = (
-                                            (
-                                                    (regressor_aboveSet['temp_heat'] *
-                                                     (ewh_capacity - regressor_aboveSet['ewh_flow'] *
-                                                      regressor_aboveSet['delta_use']) +
-                                                     regressor_aboveSet['temp_inlet'] *
-                                                     regressor_aboveSet['ewh_flow'] *
-                                                     regressor_aboveSet['delta_use']) /
-                                                    ewh_capacity
-                                            ) *
-                                            ewh_capacity *
-                                            waterHeatCap / 3600
-                                    ) * (60 * delta_t)
+    ## calculate ewh_flow via fluid mix formula
+    regressor_aboveSet['ewh_flow'] = (regressor_aboveSet['flow_rate'] * (regressor_aboveSet['temp_set']-regressor_aboveSet['temp_inlet']) / (regressor_aboveSet['temp_heat']-regressor_aboveSet['temp_inlet']))
+    ## calculate ewh output energy
+    regressor_aboveSet['w_out'] = (regressor_aboveSet['ewh_flow']*regressor_aboveSet['delta_use'] * waterHeatCap * (regressor_aboveSet['temp_heat']) / 3600) * (60 * delta_t)
+    ## calculate internal water energy
+    regressor_aboveSet['w_water'] = (((regressor_aboveSet['temp_heat']*(ewh_capacity-regressor_aboveSet['ewh_flow']*regressor_aboveSet['delta_use']) + regressor_aboveSet['temp_inlet']*regressor_aboveSet['ewh_flow']*regressor_aboveSet['delta_use']) / ewh_capacity) * ewh_capacity * waterHeatCap/3600) * (60 * delta_t)
 
-    # -- Regressor 2 with temp_ewh ranging from minimum of inlet to setpoint
+    ### Regressor 2 with temp_ewh ranging from minimum of inlet to setpoint
     # unique values of temp_inlet
     temp_inlet = list(set(temp_inlet))
     # unique values of temp_heat
-    temp_heat = [*range(np.floor(min(temp_inlet)).astype(int), tempSet+1)]
+    temp_heat = [*range(np.floor(min(temp_inlet)).astype(int),tempSet+1)]
     # unique values of delta_intervals
     delta_intervals = list(delta_intervals)
     # make all combinations
     combinations = list(product(temp_inlet, temp_heat, delta_intervals))
     # Create a DataFrame for regressor
     regressor_belowSet = pd.DataFrame(combinations, columns=['temp_inlet', 'temp_heat', 'delta_use'])
-    # add remaining variables
+    ## add remaining variables
     regressor_belowSet['temp_set'] = tempSet
     regressor_belowSet['flow_rate'] = flow_rate_value / (60 * delta_t)
-    # since internal temperature is below setpoint, the flow rate is a direct link from the EWH
+    ## since internal temperature is below setpoint, the flow rate is a direct link from the EWH
     regressor_belowSet['ewh_flow'] = flow_rate_value / (60 * delta_t)
-    # calculate ewh output energy
-    regressor_belowSet['w_out'] = (
-                                          regressor_belowSet['ewh_flow'] *
-                                          regressor_belowSet['delta_use'] *
-                                          waterHeatCap *
-                                          (regressor_belowSet['temp_heat']) / 3600
-                                  ) * (60 * delta_t)
-    # calculate internal water energy
-    regressor_belowSet['w_water'] = (
-                                            (
-                                                    (regressor_belowSet['temp_heat'] *
-                                                     (ewh_capacity -
-                                                      regressor_belowSet['ewh_flow'] *
-                                                      regressor_belowSet['delta_use']) +
-                                                     regressor_belowSet['temp_inlet'] *
-                                                     regressor_belowSet['ewh_flow'] *
-                                                     regressor_belowSet['delta_use']) /
-                                                    ewh_capacity) *
-                                            ewh_capacity *
-                                            waterHeatCap / 3600
-                                    ) * (60 * delta_t)
-    # remove lines where temp_heat < temp_inlet (impossible)
+    ## calculate ewh output energy
+    regressor_belowSet['w_out'] = (regressor_belowSet['ewh_flow']*regressor_belowSet['delta_use'] * waterHeatCap * (regressor_belowSet['temp_heat']) / 3600) * (60 * delta_t)
+    ## calculate internal water energy
+    regressor_belowSet['w_water'] = (((regressor_belowSet['temp_heat']*(ewh_capacity-regressor_belowSet['ewh_flow']*regressor_belowSet['delta_use']) + regressor_belowSet['temp_inlet']*regressor_belowSet['ewh_flow']*regressor_belowSet['delta_use']) / ewh_capacity) * ewh_capacity * waterHeatCap/3600) * (60 * delta_t)
+    ## remove lines where temp_heat < temp_inlet (impossible)
     regressor_belowSet = regressor_belowSet[regressor_belowSet['temp_heat'] >= regressor_belowSet['temp_inlet']]
 
-    # Eq.(8)
-    # above setpoint (regressor_aboveSet)
-    # create the regression
-    reg = LinearRegression().fit(
-        regressor_aboveSet[['temp_heat', 'delta_use']],
-        regressor_aboveSet['w_water'].values.reshape(-1, 1)
-    )
-    # # regression R score
-    # regressor_aboveSet_score = \
-    #     reg.score(regressor_aboveSet[['temp_heat', 'delta_use']], regressor_aboveSet['w_water'].values)
-    # Extract coeffiecients
+    ## Eq.(8)
+    ## above setpoint (regressor_aboveSet)
+    ## create the regression
+    reg = LinearRegression().fit(regressor_aboveSet[['temp_heat','delta_use']],regressor_aboveSet['w_water'].values.reshape(-1, 1))
+    ## regression R score
+    regressor_aboveSet_score = reg.score(regressor_aboveSet[['temp_heat','delta_use']],regressor_aboveSet['w_water'].values)
+    ## Extract coeffiecients
     regressor_aboveSet_m_temp = list(reg.coef_[0])[0]
     regressor_aboveSet_m_delta = list(reg.coef_[0])[1]
     regressor_aboveSet_b = reg.intercept_[0]
-    # below setpoint (regressor_belowSet)
-    # create the regression
-    reg = LinearRegression().fit(
-        regressor_belowSet[['temp_heat', 'delta_use']], regressor_belowSet['w_water'].values.reshape(-1, 1)
-    )
-    # # regression R score
-    # regressor_belowSet_score = \
-    #     reg.score(regressor_belowSet[['temp_heat', 'delta_use']], regressor_belowSet['w_water'].values)
-    # Extract coeffiecients
+    ## below setpoint (regressor_belowSet)
+    ## create the regression
+    reg = LinearRegression().fit(regressor_belowSet[['temp_heat','delta_use']],regressor_belowSet['w_water'].values.reshape(-1, 1))
+    ## regression R score
+    regressor_belowSet_score = reg.score(regressor_belowSet[['temp_heat','delta_use']],regressor_belowSet['w_water'].values)
+    ## Extract coeffiecients
     regressor_belowSet_m_temp = list(reg.coef_[0])[0]
     regressor_belowSet_m_delta = list(reg.coef_[0])[1]
     regressor_belowSet_b = reg.intercept_[0]
@@ -415,11 +364,10 @@ def linear_regressors(original_dataset, varBackpack):
 
     return varBackpack
 
-
 ##############################################
-#        Solving Optimization Problem        #
+##       Solving Optimization Problem       ##
 ##############################################
-def ewh_solver(dataset, varBackpack, optSolver='HiGHS', solverPath=None):
+def ewh_solver(dataset, varBackpack, optSolver = 'HiGHS', solverPath=None):
 
     # unpack some variables
     T = varBackpack['T']
@@ -451,7 +399,7 @@ def ewh_solver(dataset, varBackpack, optSolver='HiGHS', solverPath=None):
     regressor_belowSet_b = varBackpack['regressor_belowSet_b']
 
     ##############################################
-    #            DECISION VARIABLES              #
+    ##           DECISION VARIABLES             ##
     ##############################################
 
     # Temperature of water at EWH outlet at the beginning of time interval t (°C)
@@ -462,8 +410,8 @@ def ewh_solver(dataset, varBackpack, optSolver='HiGHS', solverPath=None):
     w_in = [LpVariable(f'w_in_{t:03d}', lowBound=0) for t in T]
     # Thermal energy losses at time interval t (kWh)
     w_loss = [LpVariable(f'w_loss_{t:03d}') for t in T]
-    # Binary variable for EWH operation status (1 = ON, 0 = OFF)
-    delta_in = [LpVariable(f'delta_in_{t:03d}', cat=LpBinary) for t in T]
+    # EWH operation status (1 = ON for the whole delta_t period, 0 = OFF)
+    delta_in = [LpVariable(f'delta_in_{t:03d}', lowBound=0, upBound=1) for t in T]
     # Amount of energy stored in the EWH after usage and mixing with inlet
     w_water = [LpVariable(f'w_water_{t:03d}', lowBound=0) for t in T]
     # Extra cost associated with water temperature reaching below comfort
@@ -473,8 +421,9 @@ def ewh_solver(dataset, varBackpack, optSolver='HiGHS', solverPath=None):
     # Pricing of that specific energy usage
     energyCost = [LpVariable(f'price_{t:03d}', lowBound=0) for t in T]
 
+
     ##############################################
-    #            DEFINING THE MILP               #
+    ##           DEFINING THE MILP              ##
     ##############################################
 
     # Create MIlP Instance
@@ -482,179 +431,145 @@ def ewh_solver(dataset, varBackpack, optSolver='HiGHS', solverPath=None):
     # Define the objective function
     milp += lpSum(energyCost[t] * 100 + costComfort[t] * 1000 for t in T), 'Objective_Function'
 
+
     ##############################################
-    #               CONSTRAINTS                  #
+    ##              CONSTRAINTS                 ##
     ##############################################
 
     for t in T:
         # Eq. (1)
         if t == 0:
-            milp += w_tot[t] == wh_init, \
-                f'Constraint_1_{t:03d}'
+           milp += w_tot[t] == wh_init, f'Constraint_1_{t:03d}'
         else:
-            milp += w_tot[t] == w_water[t-1] + w_in[t-1] - w_loss[t-1], \
-                f'Constraint_1_{t:03d}'
+           milp += w_tot[t] == w_water[t-1] + w_in[t-1] - w_loss[t-1], f'Constraint_1_{t:03d}'
         # Eq. (2)
-        milp += w_in[t] == ewh_power * delta_t * delta_in[t] * (delta_t * 60), \
-            f'Constraint_2_{t:03d}'
+        milp += w_in[t] == ewh_power * delta_t * delta_in[t] * (delta_t*60) , f'Constraint_2_{t:03d}'
         # Eq. (3) Pricing
-        milp += energyCost[t] == delta_in[t] * ewh_power * delta_t * networkPrice[t] + networkTariff * (delta_t / 24), \
-            f'Constraint_3_{t:03d}'
+        milp += energyCost[t] == delta_in[t] * ewh_power * delta_t * networkPrice[t] + networkTariff * (delta_t/24), f'Constraint_3_{t:03d}'
         # Eq. (4)
         if t == 0:
-            milp += temp[t] == ewh_start_temp, \
-                f'Constraint_4_{t:03d}'
+            milp += temp[t] == ewh_start_temp, f'Constraint_4_{t:03d}'
         else:
-            milp += temp[t] == (w_tot[t] * 3600 / (delta_t * 60)) / (ewh_capacity * waterHeatCap), \
-                f'Constraint_4_{t:03d}'
+            milp += temp[t] == (w_tot[t] * 3600 / (delta_t*60)) / (ewh_capacity * waterHeatCap), f'Constraint_4_{t:03d}'
         # Eq. (5)
-        milp += w_loss[t] == (heatTransferCoeff * ewh_area * (temp[t] - ambTemp) * delta_t) * (delta_t * 60), \
-            f'Constraint_5_{t:03d}'
+        milp += w_loss[t] == (heatTransferCoeff * ewh_area * ((temp[t] - ambTemp)) * delta_t) * (delta_t*60), f'Constraint_5_{t:03d}'
         # Eq. (6)
-        milp += wh_min <= w_tot[t], \
-            f'Constraint_6.1_{t:03d}'
-        milp += w_tot[t] <= wh_max, \
-            f'Constraint_6.2_{t:03d}'
-        milp += ewh_min_temp <= temp[t], \
-            f'Constraint_6.3_{t:03d}'
-        milp += temp[t] <= ewh_max_temp, \
-            f'Constraint_6.4_{t:03d}'
+        milp += wh_min <= w_tot[t], f'Constraint_6.1_{t:03d}'
+        milp += w_tot[t] <= wh_max, f'Constraint_6.2_{t:03d}'
+        milp += ewh_min_temp <= temp[t], f'Constraint_6.3_{t:03d}'
+        milp += temp[t] <= ewh_max_temp, f'Constraint_6.4_{t:03d}'
 
-        # Eq.(7) assure that in the (t) period after the end of hot water usage (t-1),
-        # the EWH has, at least, 80L @ 45ºC [t]
-        if (delta_use[t] - delta_use[t-1] != 0) & (delta_use[t] - delta_use[t-1] == -delta_use[t-1]):
-            # if delta_use[t] - delta_use[t-1] < 0:
-            milp += w_tot[t] >= \
-                    ((tempSet * 1.005 * ewh_capacity * waterHeatCap / 3600) * delta_t * 60) - costComfort[t], \
-                    f'Constraint_7.1_{t:03d}'
-            milp += w_tot[t-1] >= \
-                    ((tempSet * 1.005 * ewh_capacity * waterHeatCap / 3600) * delta_t * 60) - costComfort[t-1], \
-                    f'Constraint_7.2_{t:03d}'
+        ## Eq.(7) assure that in the (t) period after the end of hot water usage (t-1), the EWH has, at least, 80L @ 45ºC [t]
+        if (delta_use[t] > 0) | ((delta_use[t]-delta_use[t-1] != 0) & (delta_use[t]-delta_use[t-1] == -delta_use[t-1])):
+            milp += w_tot[t] >= ((tempSet * 1.005 * ewh_capacity * waterHeatCap / 3600) * delta_t * 60) - costComfort[t], f'Constraint_7.1_{t:03d}'
+            milp += w_tot[t-1] >= ((tempSet * 1.005 * ewh_capacity * waterHeatCap / 3600) * delta_t * 60) - costComfort[t-1], f'Constraint_7.2_{t:03d}'
 
-        # Eq.(8) Internal water energy after usage
+        ## Eq.(8) Internal water energy after usage
         if delta_use[t] > 0:
             # binary definition with temp[t]
-            milp += temp[t] >= tempSet - bigNumber * (1-binAux[t]), \
-                f'Constraint_8.1_{t:03d}'
-            milp += temp[t] <= tempSet + bigNumber * binAux[t], \
-                f'Constraint_8.2_{t:03d}'
+            milp += temp[t] >= tempSet - bigNumber * (1-binAux[t]), f'Constraint_8.1_{t:03d}'
+            milp += temp[t] <= tempSet + bigNumber * binAux[t], f'Constraint_8.2_{t:03d}'
             # if temp[t] > tempSet
-            milp += w_water[t] >= (
-                    regressor_aboveSet_m_temp * temp[t] +
-                    regressor_aboveSet_m_delta * delta_use[t] +
-                    regressor_aboveSet_b) - \
-                    bigNumber * (1 - binAux[t]), \
-                f'Constraint_8.3_{t:03d}'
-            milp += w_water[t] <= (
-                    regressor_aboveSet_m_temp * temp[t] +
-                    regressor_aboveSet_m_delta * delta_use[t] +
-                    regressor_aboveSet_b) + \
-                    bigNumber * (1-binAux[t]), \
-                f'Constraint_8.4_{t:03d}'
+            milp += w_water[t] >= (regressor_aboveSet_m_temp * temp[t] + regressor_aboveSet_m_delta * delta_use[t] + regressor_aboveSet_b) - bigNumber * (1-binAux[t]), f'Constraint_8.3_{t:03d}'
+            milp += w_water[t] <= (regressor_aboveSet_m_temp * temp[t] + regressor_aboveSet_m_delta * delta_use[t] + regressor_aboveSet_b) + bigNumber * (1-binAux[t]), f'Constraint_8.4_{t:03d}'
             # else
-            milp += w_water[t] >= (
-                    regressor_belowSet_m_temp * temp[t] +
-                    regressor_belowSet_m_delta * delta_use[t] +
-                    regressor_belowSet_b) - \
-                    bigNumber * binAux[t], \
-                f'Constraint_8.5_{t:03d}'
-            milp += w_water[t] <= (
-                    regressor_belowSet_m_temp * temp[t] +
-                    regressor_belowSet_m_delta * delta_use[t] +
-                    regressor_belowSet_b) + \
-                    bigNumber * binAux[t], \
-                f'Constraint_8.6_{t:03d}'
+            milp += w_water[t] >= (regressor_belowSet_m_temp * temp[t] + regressor_belowSet_m_delta * delta_use[t] + regressor_belowSet_b) - bigNumber * binAux[t], f'Constraint_8.5_{t:03d}'
+            milp += w_water[t] <= (regressor_belowSet_m_temp * temp[t] + regressor_belowSet_m_delta * delta_use[t] + regressor_belowSet_b) + bigNumber * binAux[t], f'Constraint_8.6_{t:03d}'
         else:
-            milp += w_water[t] == (temp[t] * ewh_capacity * waterHeatCap / 3600) * delta_t * 60, \
-                f'Constraint_8.7_{t:03d}'
+            milp += w_water[t] == (temp[t] * ewh_capacity * waterHeatCap / 3600) * delta_t * 60, f'Constraint_8.7_{t:03d}'
+
+
+
 
     ##############################################
-    #            SAVING AND SOLVING              #
+    ##           SAVING AND SOLVING             ##
     ##############################################
 
     # Write the milp to a .lp file
     milp.writeLP('thermo_milp.lp')
 
-    # time limit depends on simulated days plus 1 minute
+    #time limit depends on simulated days plus 1 minute
     timeLimit = (daySim * 10) + 60
 
-    if optSolver == 'HiGHS':
+
+    if (optSolver == 'HiGHS'):
         solver = getSolver('HiGHS_CMD', msg=True, timeLimit=timeLimit, path=solverPath, gapRel=0.015, threads=1)
-    if optSolver == 'CBC':
+    if (optSolver == 'CBC'):
         solver = getSolver('PULP_CBC_CMD', msg=True, timeLimit=timeLimit, gapRel=0.015)
 
     milp.solve(solver)
-    # # -- LpStatus is a dictionary with the status of solution:
-    # # -- {0: 'Not Solved', 1: 'Optimal', -1: 'Infeasible', -2: 'Unbounded', -3: 'Undefined'}
-    # stat = LpStatus[milp.status]
-    # opt_val = value(milp.objective)  # objective function value
+    # -- LpStatus is a dictionary with the status of solution:
+    # -- {0: 'Not Solved', 1: 'Optimal', -1: 'Infeasible', -2: 'Unbounded', -3: 'Undefined'}
+    stat = LpStatus[milp.status]
+    opt_val = value(milp.objective)  # objective function value
+
+
 
     ##############################################
-    #              Export Results                #
+    ##             Export Results               ##
     ##############################################
-    # # Outputs stored in sheet "general"
-    # general_outputs = {'MILP status': stat, 'Objective Function Value': opt_val}
-
+    # Outputs stored in sheet "general"
+    general_outputs = {'MILP status': stat, 'Objective Function Value': opt_val}
     # create template for diagram df
-    opt_diagrams = dataset[['timestamp', 'temp_inlet', 'delta_use']].copy()
+    opt_diagrams = dataset[['timestamp','temp_inlet','delta_use']].copy()
+
 
     for v in milp.variables():
 
         temp_idx = int(''.join(filter(str.isdigit, str(v))))
 
-        # find variables and store data
+        ## find variables and store data
         if re.search(f'temp_', v.name):
-            opt_diagrams.loc[temp_idx, 'temp'] = v.varValue
+            opt_diagrams.loc[temp_idx,'temp'] = v.varValue
         if re.search(f'w_tot_', v.name):
-            opt_diagrams.loc[temp_idx, 'w_tot'] = v.varValue
+            opt_diagrams.loc[temp_idx,'w_tot'] = v.varValue
         if re.search(f'w_water_', v.name):
             opt_diagrams.loc[temp_idx, 'w_water'] = v.varValue
         if re.search(f'w_in_', v.name):
-            opt_diagrams.loc[temp_idx, 'w_in'] = v.varValue
+            opt_diagrams.loc[temp_idx,'w_in'] = v.varValue
         if re.search(f'w_out_', v.name):
-            opt_diagrams.loc[temp_idx, 'w_out'] = v.varValue
+            opt_diagrams.loc[temp_idx,'w_out'] = v.varValue
         if re.search(f'w_loss_', v.name):
-            opt_diagrams.loc[temp_idx, 'w_loss'] = v.varValue
+            opt_diagrams.loc[temp_idx,'w_loss'] = v.varValue
         if re.search(f'delta_in_', v.name):
-            opt_diagrams.loc[temp_idx, 'delta_in'] = v.varValue
+            opt_diagrams.loc[temp_idx,'delta_in'] = v.varValue
         if re.search(f'binAux_', v.name):
-            opt_diagrams.loc[temp_idx, 'binAux'] = v.varValue
+            opt_diagrams.loc[temp_idx,'binAux'] = v.varValue
         if re.search(f'price_', v.name):
-            opt_diagrams.loc[temp_idx, 'price'] = v.varValue
+            opt_diagrams.loc[temp_idx,'price'] = v.varValue
 
     # fix delta_in very low and close to 1 values
-    opt_diagrams.loc[opt_diagrams['delta_in'] < 0.001, 'delta_in'] = 0
-    opt_diagrams.loc[opt_diagrams['delta_in'] > 0.999, 'delta_in'] = 1
-    # add variable of flexibility (1-delta_in):
+    opt_diagrams.loc[opt_diagrams['delta_in']<0.001,'delta_in'] = 0
+    opt_diagrams.loc[opt_diagrams['delta_in']>0.999,'delta_in'] = 1
+    ## add variable of flexibility (1-delta_in):
     opt_diagrams['flex'] = 1-opt_diagrams['delta_in']
-    # total flexibility (min)
+    ## total flexibility (min)
     total_flex = sum(opt_diagrams['flex']) * (60*delta_t)
     # percentage flexibility
     perc_flex = 100*total_flex/(len(opt_diagrams)*60*delta_t)
-    # average daily flexiblity
+    ## average daily flexiblity
     avgDailyFlex = total_flex/daySim
-    avgDailyFlex_srt = str(datetime.timedelta(minutes=avgDailyFlex) -
-                           datetime.timedelta(microseconds=datetime.timedelta(minutes=avgDailyFlex).microseconds))
-    # optimized load
+    avgDailyFlex_srt = str(datetime.timedelta(minutes=avgDailyFlex) - datetime.timedelta(microseconds=datetime.timedelta(minutes=avgDailyFlex).microseconds))
+    ## optimized load
     optimized_load = sum(opt_diagrams['delta_in']) * ewh_power * delta_t
-    # average daily load
+    ## average daily load
     avgDailyLoad = optimized_load/daySim
-    # (deleted microseconds)
-    # avgDailyLoad_str = str(datetime.timedelta(minutes=avgDailyLoad) -
-    # datetime.timedelta(microseconds=datetime.timedelta(minutes=avgDailyLoad).microseconds))
-    # calculate total optimized load diagram
+    ## (deleted microseconds)
+    # avgDailyLoad_str = str(datetime.timedelta(minutes=avgDailyLoad) - datetime.timedelta(microseconds=datetime.timedelta(minutes=avgDailyLoad).microseconds))
+    ## calculate total optimized load diagram
     opt_diagrams['optimized_load'] = opt_diagrams['delta_in']*1000*ewh_power
-    # add original load
+    ## add original load
     opt_diagrams['original_load'] = dataset['load']
-    # optimized price
+    ## optimized price
     optimized_price = sum(opt_diagrams['price'])
-    # original load
+    ## original load
     original_load = (dataset['load'].sum()/1000) * (1/60)
-    # original price
-    # network price per minute
+    ## original price
+    ## network price per minute
     networkTariff_minute = networkTariff * (delta_t/24)
     networkTariff_used = networkTariff_minute * len(dataset)
     original_price = original_load * dataset.price1[0] + networkTariff_used
+
 
     print("Simulated Period:", str(datetime.timedelta(minutes=len(dataset))))
     print("Time Resolution:", int(60*delta_t), 'min')
@@ -667,7 +582,6 @@ def ewh_solver(dataset, varBackpack, optSolver='HiGHS', solverPath=None):
     print("Perc. Flexibility:", "{:.2f}".format(perc_flex), '%')
     print("Avg. Flexibililty per day:", avgDailyFlex_srt)
 
-    # noinspection PyDictCreation
     opt_output = {}
     opt_output['user'] = user
     opt_output['tempSet'] = tempSet

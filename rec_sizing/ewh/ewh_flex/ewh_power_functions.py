@@ -1,5 +1,5 @@
 ##############################################
-#        EWH Power Profile Functions         #
+##       EWH Power Profile Functions        ##
 ##############################################
 
 import pandas as pd
@@ -11,14 +11,14 @@ from .auxiliary_functions import round_up_hundred
 
 
 ##############################################
-#           Create Usage Dataset             #
+##          Create Usage Dataset            ##
 ##############################################
 def create_usage_dataset(waterUsage):
 
     waterUsage = pd.DataFrame(waterUsage).copy()
     # create dataframe with the full minute resolution based on the
-    firstUsage = pd.to_datetime(waterUsage.loc[0, 'start']).strftime('%Y-%m-%d')
-    lastUsage = pd.to_datetime(waterUsage.loc[len(waterUsage)-1, 'start']).strftime('%Y-%m-%d')
+    firstUsage = pd.to_datetime(waterUsage.loc[0,'start']).strftime('%Y-%m-%d')
+    lastUsage = pd.to_datetime(waterUsage.loc[len(waterUsage)-1,'start']).strftime('%Y-%m-%d')
     if firstUsage == lastUsage:
         lastUsage = (pd.to_datetime(lastUsage) + pd.DateOffset(days=1)).strftime('%Y-%m-%d')
     dataset = pd.DataFrame(pd.date_range(firstUsage, lastUsage, freq='min'), columns=['timestamp'])
@@ -28,18 +28,19 @@ def create_usage_dataset(waterUsage):
     dataset['delta_use'] = 0
 
     # mark periods of usage
-    for i in range(0, len(waterUsage)):
-        _start = pd.to_datetime(waterUsage.loc[i, 'start'])
-        _duration = int(waterUsage.loc[i, 'duration'])
+    for i in range(0,len(waterUsage)):
+        _start = pd.to_datetime(waterUsage.loc[i,'start'])
+        _duration = int(waterUsage.loc[i,'duration'])
         _end = _start + pd.DateOffset(minutes=_duration-1)
         _period = pd.date_range(_start, _end, freq='min')
-        dataset.loc[dataset['timestamp'].isin(list(_period)), 'delta_use'] = 1
+        dataset.loc[dataset['timestamp'].isin(list(_period)),'delta_use'] = 1
 
     return dataset
 
 
+
 ##############################################
-#          Real EWH Load Estimator           #
+##         Real EWH Load Estimator          ##
 ##############################################
 def real_ewh_load_estimator(dataset, varBackpack):
 
@@ -56,7 +57,7 @@ def real_ewh_load_estimator(dataset, varBackpack):
     ewh_std_temp = varBackpack['ewh_std_temp']
     ewh_power = varBackpack['ewh_power']
 
-    dataset = dataset[['timestamp', 'delta_use']].copy()
+    dataset = dataset[['timestamp','delta_use']].copy()
 
     # ewh starts off
     delta_in = 0
@@ -78,9 +79,9 @@ def real_ewh_load_estimator(dataset, varBackpack):
 
         # guarantees that the ewh turns on when reaching 5ºC below working temperature
         # and turns off when reaching working temperature
-        if temp < (ewh_std_temp-3):
+        if (temp < (ewh_std_temp-3)):
             delta_in = 1
-        if temp >= ewh_std_temp:
+        if (temp >= ewh_std_temp):
             delta_in = 0
 
         # calculates stored energy after mixing water with inlet
@@ -93,7 +94,7 @@ def real_ewh_load_estimator(dataset, varBackpack):
             w_water = (temp * ewh_capacity * waterHeatCap / 3600)
 
         # calculate thermal losses
-        w_loss = (heatTransferCoeff * ewh_area * (temp - ambTemp) * delta_t)
+        w_loss = (heatTransferCoeff * ewh_area * ((temp - ambTemp)) * delta_t)
 
         # calculate input energy (on/off)
         w_in = ewh_power * delta_t * delta_in
@@ -110,26 +111,28 @@ def real_ewh_load_estimator(dataset, varBackpack):
     return dataset['load']
 
 
+
 ##############################################
-#         EWH Spec Power Detection           #
+##        EWH Spec Power Detection          ##
 ##############################################
 def ewh_power_detection(dataset):
     _temp_load = pd.DataFrame(dataset.copy())
-    _temp_load.columns = ['timestamp', 'load']
+    _temp_load.columns = ['timestamp','load']
     _temp_load['timestamp'] = pd.to_datetime(_temp_load['timestamp'], utc=True)
 
     # delete observations where load is low
-    _temp_load = _temp_load.loc[_temp_load['load'] > (0.15 * max(_temp_load['load']) / .95)]
+    _temp_load = _temp_load.loc[_temp_load['load'] > (0.15 * max(_temp_load['load'])/.95)]
     # filter out bottom and top 10% values
     _quantile = _temp_load['load'].quantile([0.1, 0.9])
     _temp_load = _temp_load[_temp_load['load'].between(_quantile[.1], _quantile[0.9])]
     # estimated load is the average of the selected observations
-    _ewh_estimated_power = round_up_hundred(_temp_load['load'].mean() / .9)
+    _ewh_estimated_power = round_up_hundred(_temp_load['load'].mean()/.9)
     return _ewh_estimated_power
 
 
+
 ##############################################
-#          Convert Load to Usage             #
+##         Convert Load to Usage            ##
 ##############################################
 def convert_load_usage(dataset, varBackpack):
 
@@ -140,12 +143,12 @@ def convert_load_usage(dataset, varBackpack):
 
     # dataset copy
     _temp_load = pd.DataFrame(dataset.copy())
-    _temp_load.columns = ['timestamp', 'load']
+    _temp_load.columns = ['timestamp','load']
     _temp_load['timestamp'] = pd.to_datetime(_temp_load['timestamp'], utc=True)
 
     # required data
     ewh_power = 0.9 * ewh_power/1000  # kilowatts with 90% efficiency
-    ewh_max_temp = 0.9 * ewh_max_temp  # assumes 80% of max temperature
+    ewh_max_temp = 0.9 * ewh_max_temp # assumes 80% of max temperature
     temp_set = temp_set  # comfort temperature (usage)
     temp_inlet = 20  # network water temperature
     flow_out = 8.5  # liters per minute
@@ -166,6 +169,7 @@ def convert_load_usage(dataset, varBackpack):
     _temp_load['heating'] = 0
     _temp_load.loc[(_temp_load['load'] / 100) > (ewh_power / 5), 'heating'] = 1
 
+
     # 1st step: detect average duration of periods between automatic re-heating
     # objective, disregard periods where the EWH activates without water usage
     # auxiliary variable for flagging blanks blocks
@@ -185,8 +189,9 @@ def convert_load_usage(dataset, varBackpack):
             # calculate total minutes of blank
             blank_time = int((_end - _start).total_seconds() / 60)
             # only saves blocks if larger than 90min
-            if blank_time > 90:
-                blanks_list.append(blank_time)
+            # if blank_time > 90:
+            #     blanks_list.append(blank_time)
+            blanks_list.append(blank_time)
 
     blanks_list = np.array(blanks_list)
 
@@ -207,6 +212,7 @@ def convert_load_usage(dataset, varBackpack):
             # calculate total minutes of blank
             blank_time = int((_end_blank - _start_blank).total_seconds() / 60)
 
+
         if (_temp_load.loc[i, 'heating'] == 1) & (heating == 0):
             _start = _temp_load.loc[i, 'timestamp']
             heating = 1
@@ -220,11 +226,14 @@ def convert_load_usage(dataset, varBackpack):
             heating_time = int((_end - _start).total_seconds() / 60)
             # calculate total minutes of usage via formula
             usage_time = heating_time / (1 + ((ewh_max_temp * flow_ewh * waterHeatCap) / (3600 * w_in)))
+            # save float version
+            usage_time_float = usage_time
+            # save int/ceiled version
             usage_time = math.ceil(usage_time)
             # extract end of usage (subtract one, since start date already included)
             _end = _start + datetime.timedelta(minutes=(usage_time - 1))
-            # only flags if long enough and using blank filters
-            if (blank_time < blanks_list.mean()*.9) | (usage_time > 2):
+            # only flags if blank is less than 90% of average, and higher than 1 min, or just higher than 2 min
+            if ((blank_time < blanks_list.mean()*0.9) & (usage_time_float > 1)) | (usage_time_float > 2):
                 # flag as using water
                 _temp_load.loc[(_temp_load['timestamp'] >= _start) & (_temp_load['timestamp'] <= _end), 'usage'] = 1
             continue

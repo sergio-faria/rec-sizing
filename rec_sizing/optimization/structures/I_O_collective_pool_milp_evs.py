@@ -25,6 +25,7 @@ INPUTS_POOL_EVS = {
 			'eff_bc': 1.0,
 			'eff_bd': 1.0,
 			'soc_max': 100.0,
+			'deg_cost': 0.0,
 			'btm_evs': {
 				'EV#1': {
 					'trip_ev': [0, 0.3, 0],
@@ -69,6 +70,7 @@ INPUTS_POOL_EVS = {
 			'eff_bc': 1.0,
 			'eff_bd': 1.0,
 			'soc_max': 100.0,
+			'deg_cost': 0.0,
 			'btm_evs': {
 				'EV#1': {
 					'trip_ev': [0, 0.3, 0],
@@ -281,30 +283,6 @@ OUTPUTS_POOL_EVS = {
             1.0,
             0.0,
             1.0
-        ],
-        "Meter#2": [
-            0.0,
-            0.0,
-            0.0
-        ]
-    },
-    "delta_cmet": {
-        "Meter#1": [
-            0.0,
-            0.0,
-            0.0
-        ],
-        "Meter#2": [
-            0.0,
-            0.0,
-            0.0
-        ]
-    },
-    "delta_alc": {
-        "Meter#1": [
-            0.0,
-            0.0,
-            0.0
         ],
         "Meter#2": [
             0.0,

@@ -76,6 +76,7 @@ class SingleMeter(TypedDict):
 	eff_bc: float
 	eff_bd: float
 	soc_max: float
+	deg_cost: float
 	btm_evs: Union[BTMEVs, None]
 	ewh: Union[EWH, None]
 

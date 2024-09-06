@@ -169,6 +169,7 @@ def run_pre_collective_pool_milp(
 				'eff_bc': a fixed value, between 0 and 1, that expresses the charging efficiency of the BESS
 				'eff_bd': a fixed value, between 0 and 1, that expresses the discharging efficiency of the BESS
 				'soc_max': a percentage, applicable to "e_bn", identifying a maximum limit to the energy content
+				'deg_cost': a float representing a penalty for cyclic degradation of the BESS, in €/kWh
 				'btm_evs': structure where several Btm EVs units can be defined
 					#EV_id: {
 						'trip_ev': EV energy consumption, in kWh
