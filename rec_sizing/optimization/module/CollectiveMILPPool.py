@@ -761,7 +761,7 @@ class CollectiveMILPPool:
 
 		# Set the solver to be called
 		if self.solver == 'CBC' and 'PULP_CBC_CMD' in listSolvers(onlyAvailable=True):
-			self.milp.setSolver(pulp.PULP_CBC_CMD(msg=True, timeLimit=self.timeout, gapRel=self.mipgap))
+			self.milp.setSolver(pulp.PULP_CBC_CMD(msg=False, timeLimit=self.timeout, gapRel=self.mipgap))
 
 		elif self.solver == 'CPLEX' and 'CPLEX_CMD' in listSolvers(onlyAvailable=True):
 			# for more info on some available parameters:
@@ -775,7 +775,7 @@ class CollectiveMILPPool:
 			# https://www-eio.upc.edu/lceio/manuals/cplex75/doc/refmanccpp/html/baseSystem.html
 			# background on "fixed mip" infeasibility over incumbent solution (for duals calculation):
 			# https://or.stackexchange.com/questions/6048/avoid-infeasibility-in-fixed-mip-problem-in-cplex
-			self.milp.setSolver(CPLEX_CMD(msg=True, timeLimit=self.timeout, gapRel=self.mipgap, options=[
+			self.milp.setSolver(CPLEX_CMD(msg=False, timeLimit=self.timeout, gapRel=self.mipgap, options=[
 				'set emphasis mip 5',
 				# 'set mip strategy fpheur 2',
 				# 'set simplex tolerances feasibility 1e-9',
@@ -786,7 +786,7 @@ class CollectiveMILPPool:
 		elif self.solver == 'HiGHS' and 'HiGHS_CMD' in listSolvers(onlyAvailable=True):
 			self.milp.setSolver(
 				HiGHS_CMD(
-					msg=True,
+					msg=False,
 					timeLimit=self.timeout,
 					gapRel=self.mipgap,
 					threads=1,
