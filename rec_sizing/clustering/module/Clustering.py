@@ -51,8 +51,8 @@ def clustering_kmedoids(inputs: BackpackKMedoids) -> OutputsKMedoids:
             inputs_df['date'] = 0
     inputs_df.reset_index(inplace=True, drop=True)
 
-    inputs_df['hours'] = list(range(nr_daily_delta_t * nr_days)) * nr_meters
-    inputs_df['date'] = inputs_df['hours'] // 24
+    inputs_df['hours'] = [x // 4 - 24 * (x // 96) for x in list(range(nr_daily_delta_t * nr_days))] * nr_meters
+    inputs_df['date'] = [x // 96 for x in list(range(nr_daily_delta_t * nr_days))] * nr_meters
 
     # Check that the number of timeseries data points provided matches the number of days times the step in hours
     assert len(inputs_df) == nr_points_per_var, \
