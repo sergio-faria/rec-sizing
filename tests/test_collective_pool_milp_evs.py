@@ -10,7 +10,7 @@ def test_solve_collective_pool_milp_evs():
 	inputs = deepcopy(INPUTS_POOL_EVS)
 	inputs['w_clustering'] = [1] * 3
 	# Assert the creation of a correct class
-	milp = CollectiveMILPPool(inputs)
+	milp = CollectiveMILPPool(inputs, 1/8)
 	assert isinstance(milp, CollectiveMILPPool)
 
 	# Assert the MILP is optimally solved

@@ -281,6 +281,7 @@ def run_pre_collective_pool_milp(
 	# define nr_clusters = nr_days in case nr_clusters was not provided (i.e., do not clusterize data)
 	nr_clusters = backpack.get('nr_clusters')
 	nr_days = backpack.get('nr_days')
+	nr_dates = nr_days
 	if nr_clusters is not None:
 		if nr_clusters > nr_days:
 			logger.warning(f'nr_clusters > nr_days')
@@ -356,7 +357,7 @@ def run_pre_collective_pool_milp(
 
 	# -- RUN MILP ------------------------------------------------------------------------------------------------------
 	logger.info(' - defining MILP -')
-	milp = CollectiveMILPPool(backpack, solver, timeout, mipgap)
+	milp = CollectiveMILPPool(backpack, nr_dates, solver, timeout, mipgap)
 
 	nr_days = backpack.get('nr_days')
 	logger.info(f' - MILP set with an horizon of {nr_days} days, mipgap={mipgap}, timeout={timeout}, solver={solver} -')

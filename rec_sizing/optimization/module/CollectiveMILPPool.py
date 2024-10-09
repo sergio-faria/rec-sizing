@@ -41,9 +41,22 @@ from pulp import (
 
 
 class CollectiveMILPPool:
-	def __init__(self, backpack: BackpackCollectivePoolDict, solver=SOLVER, timeout=TIMEOUT, mipgap=MIPGAP):
+	def __init__(self, backpack: BackpackCollectivePoolDict,
+				 nr_dates: int,
+				 solver=SOLVER,
+				 timeout=TIMEOUT,
+				 mipgap=MIPGAP):
+		"""
+		Initialize core MILP class
+		:param backpack: necessary data
+		:param nr_dates: number of original days considered in the optimization horizon; >= nr_days = nr_clusters
+		:param solver: which available solver should be used; currently supports CBC and CPLEX
+		:param timeout: time limit (s) for the solver to find a solution, after which the best (not optimal) is returned
+		:param mipgap: tolerance for the solver; between 0 and 1
+		"""
 		# Indices and sets
-		self._nr_days = backpack.get('nr_days')  # operation period (days)
+		self._nr_days = backpack.get('nr_days')  # operation period (days) (= nr_clusters)
+		self._nr_dates = nr_dates  # number of original days considered in the optimization horizon (days)
 		self._horizon = None  # operation period (hours)
 		# Parameters
 		self._l_buy = None  # supply energy tariff [€/kWh]
@@ -392,9 +405,9 @@ class CollectiveMILPPool:
 				) * self._w_clustering[t]
 				for t in self.time_series
 			)
-			+ p_cont[n] * self._l_cont[n] * self._nr_days
-			+ p_gn_new[n] * self._l_gic[n] * self._nr_days
-			+ e_bn_new[n] * self._l_bic[n] * self._nr_days
+			+ p_cont[n] * self._l_cont[n] * self._nr_dates
+			+ p_gn_new[n] * self._l_gic[n] * self._nr_dates
+			+ e_bn_new[n] * self._l_bic[n] * self._nr_dates
 			for n in self.set_meters
 		)
 		self.milp += objective, 'Objective Function'
@@ -1032,9 +1045,9 @@ class CollectiveMILPPool:
 			deg_cost = self._deg_cost[n]
 
 			c_ind_array = sum((e_sup * l_buy - e_sur * l_sell + e_slc * l_grid + e_bd * deg_cost) * self._w_clustering) + \
-						  p_cont * l_cont * self._nr_days + \
-						  p_gn_new * l_gic * self._nr_days + \
-						  e_bn_new * l_bic * self._nr_days
+						  p_cont * l_cont * self._nr_dates + \
+						  p_gn_new * l_gic * self._nr_dates + \
+						  e_bn_new * l_bic * self._nr_dates
 			outputs['c_ind2pool'][n] = round(c_ind_array, 4)
 
 		# Also retrieve the slack values of the "Market Equilibrium" constraints. These can be considered as the

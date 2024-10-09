@@ -16,7 +16,7 @@ def test_solve_collective_pool_milp_no_install():
 	inputs['w_clustering'] = [1] * 3
 
 	# Assert the creation of a correct class
-	milp = CollectiveMILPPool(inputs)
+	milp = CollectiveMILPPool(inputs, 1/8)
 	assert isinstance(milp, CollectiveMILPPool)
 
 	# Assert the MILP is optimally solved
@@ -38,7 +38,7 @@ def test_solve_collective_pool_milp_no_install_deg():
 	inputs['w_clustering'] = [1] * 3
 
 	# Assert the creation of a correct class
-	milp = CollectiveMILPPool(inputs)
+	milp = CollectiveMILPPool(inputs, 1/8)
 	assert isinstance(milp, CollectiveMILPPool)
 
 	# Assert the MILP is optimally solved
@@ -60,7 +60,7 @@ def test_solve_collective_pool_milp_yes_install():
 	inputs['w_clustering'] = [1] * 3
 
 	# Assert the creation of a correct class
-	milp = CollectiveMILPPool(inputs)
+	milp = CollectiveMILPPool(inputs, 1/8)
 	assert isinstance(milp, CollectiveMILPPool)
 
 	# Assert the MILP is optimally solved
