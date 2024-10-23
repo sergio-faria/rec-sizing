@@ -289,6 +289,7 @@ def run_pre_collective_pool_milp(
 			backpack['nr_clusters'] = nr_days
 	else:
 		nr_clusters = nr_days
+		backpack['nr_days_old'] = nr_days
 		backpack['nr_clusters'] = nr_days
 
 	# Default the grid tariffs' array in case of non-valid option
@@ -348,7 +349,7 @@ def run_pre_collective_pool_milp(
 		for cl in range(nr_clusters):
 			backpack['l_grid'] += clustered_inputs['representative_l_grid'][str(cl)]
 			backpack['w_clustering'] += [clustered_inputs['cluster_nr_days'][str(cl)]] * nr_daily_data_points
-
+		backpack['nr_days_old'] = nr_days
 		backpack['nr_days'] = nr_clusters
 
 	# Use timeseries data as is, effectively running the MILP with nr_days as the total number of days worth of data

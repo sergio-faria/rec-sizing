@@ -92,6 +92,8 @@ INPUTS_POOL_EWH = {
 
 OUTPUTS_POOL_EWH = {
 	"obj_value": -0.083,
+	'nr_dates': 0.125,
+	'w_clustering': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 	"milp_status": "Optimal",
 	"p_cont": {
 		"Meter#1": 0.2,

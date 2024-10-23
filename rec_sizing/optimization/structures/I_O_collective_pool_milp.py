@@ -54,6 +54,8 @@ INPUTS_NO_INSTALL_POOL = {
 OUTPUTS_NO_INSTALL_POOL = {
 	'obj_value': -0.083,
 	'milp_status': 'Optimal',
+	'nr_dates': 0.125,
+	'w_clustering': [1, 1, 1],
 	'p_cont': {
 		'Meter#1': 0.2,
 		'Meter#2': 0.1
@@ -202,6 +204,8 @@ INPUTS_INSTALL_POOL = {
 OUTPUTS_INSTALL_POOL = {
     'obj_value': 0.006,
     'milp_status': 'Optimal',
+	'nr_dates': 0.125,
+	'w_clustering': [1, 1, 1],
     'p_cont': {
         'Meter#1': 0.0,
         'Meter#2': 0.0
@@ -514,6 +518,8 @@ INPUTS_CLUSTER_POOL = {
 OUTPUTS_CLUSTER_POOL = {
 	'obj_value': 7.615,
 	'milp_status': 'Optimal',
+	'nr_dates': 2,
+	'w_clustering': [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
 	'p_cont': {
 		'CPE#1': 3.01,
 		'CPE#2': 0.4
@@ -696,6 +702,8 @@ INPUTS_NO_INSTALL_DEG_COST_POOL = {
 OUTPUTS_NO_INSTALL_DEG_COST_POOL = {
     "obj_value": 1.408,
     "milp_status": "Optimal",
+	'nr_dates': 0.125,
+	'w_clustering': [1, 1, 1],
     "p_cont": {
         "Meter#1": 0.5,
         "Meter#2": 0.1

@@ -5,6 +5,8 @@
     - Total REC costs by member
     - Total REC costs affected by the internal market compensation by member
 """
+import numpy as np
+
 from rec_sizing.optimization.helpers.milp_helpers import (dict_none_lists, time_intervals)
 
 def desegregated_OF_costs(results, inputs_opt):
@@ -17,18 +19,21 @@ def desegregated_OF_costs(results, inputs_opt):
     results['contractedpower_cost'] = {meter_id: None for meter_id in set_meters}
     results['batteries_investments_cost'] = {meter_id: None for meter_id in set_meters}
     results['PV_investments_cost'] = {meter_id: None for meter_id in set_meters}
+    # results['meter_cost'] = {meter_id: None for meter_id in set_meters}
 
     for n in set_meters:
         increment = f'{n}'
         # Exchanges costs with the main grid (buying and selling energy)
-        results['retailer_exchanges_cost'][n] = round(sum(results['e_sup'][n][t] * inputs_opt['meters'][n]['l_buy'][t] - results['e_sur'][n][t] * inputs_opt['meters'][n]['l_sell'][t] for t in time_series), 3)
+        results['retailer_exchanges_cost'][n] = round(sum((np.array(results['e_sup'][n]) * np.array(inputs_opt['meters'][n]['l_buy']) -
+                                                           np.array(results['e_sur'][n]) * np.array(inputs_opt['meters'][n]['l_sell'])) * results['w_clustering']), 5)
         # Using Networks Costs for self-consumption (through assets)
-        results['sc_tariff_cost'][n] = round(sum(results['e_slc_pool'][n][t] * inputs_opt['l_grid'][t] for t in time_series), 3)
+        results['sc_tariff_cost'][n] = round(sum((np.array(results['e_slc_pool'][n]) * np.array(inputs_opt['l_grid'])) * results['w_clustering']), 5)
         # Contracted Power Costs
-        results['contractedpower_cost'][n] = round(results['p_cont'][n] * inputs_opt['meters'][n]['l_cont'] * inputs_opt['nr_days'], 3)
+        results['contractedpower_cost'][n] = round(results['p_cont'][n] * inputs_opt['meters'][n]['l_cont'] * inputs_opt['nr_days_old'], 5)
         # Investment costs of individual and shared assets (CPE)
-        results['batteries_investments_cost'][n] = round(results['e_bn_new'][n] * inputs_opt['meters'][n]['l_bic'] * inputs_opt['nr_days'], 3)
-        results['PV_investments_cost'][n] = round(results['p_gn_new'][n] * inputs_opt['meters'][n]['l_gic'] * inputs_opt['nr_days'], 3)
+        results['batteries_investments_cost'][n] = round(results['e_bn_new'][n] * inputs_opt['meters'][n]['l_bic'] * inputs_opt['nr_days_old'], 5)
+        results['PV_investments_cost'][n] = round(results['p_gn_new'][n] * inputs_opt['meters'][n]['l_gic'] * inputs_opt['nr_days_old'], 5)
+        # results['meter_cost'][n] = round(results['retailer_exchanges_cost'][n] + results['sc_tariff_cost'][n] + results['contractedpower_cost'][n] + results['batteries_investments_cost'][n] + results['PV_investments_cost'][n], 4)
 
     return results
 
@@ -47,7 +52,7 @@ def post_processing_InternalMarket(results, inputs_opt):
     # internal market compensations - Pool
     results['internal_market'] = {meter_id: None for meter_id in set_meters}
     for n in set_meters:
-        results['internal_market'][n] = round(sum(results['dual_prices'][t] * results['sold_position'][n][t] for t in time_series), 4)
+        results['internal_market'][n] = round(sum((np.array(results['dual_prices']) * np.array(results['sold_position'][n])) * results['w_clustering']), 4)
     # validation of pool compensations
     if round(sum(results['internal_market'][n] for n in set_meters), 3) == 0:
         print('True: total costs internal market compensations = 0')

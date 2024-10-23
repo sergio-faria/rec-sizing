@@ -102,6 +102,8 @@ INPUTS_POOL_EVS = {
 OUTPUTS_POOL_EVS = {
     "obj_value": -0.473,
     "milp_status": "Optimal",
+    'nr_dates': 0.125,
+    'w_clustering': [1, 1, 1],
     "p_cont": {
         "Meter#1": 0.396,
         "Meter#2": 0.1465299

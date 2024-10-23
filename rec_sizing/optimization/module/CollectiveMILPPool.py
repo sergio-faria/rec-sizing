@@ -394,21 +394,27 @@ class CollectiveMILPPool:
 					energyEWH[n][e][t] = LpVariable(f'energyEWH_' + increment, lowBound=0)
 
 		# Eq. 1: Objective Function
-		objective = lpSum(
-			lpSum(
-				(
+		objective = (
+				lpSum(
+					lpSum(
 						e_sup[n][t] * self._l_buy[n][t]
 						- e_sur[n][t] * self._l_sell[n][t]
 						+ e_slc[n][t] * self._l_grid[t]
-						+ lpSum(costComfort[n][e][t] * 100 for e in self.set_ewh[n])
+						+ lpSum(
+							costComfort[n][e][t] * 100
+							for e in self.set_ewh[n]
+						)
 						+ e_bd[n][t] * self._deg_cost[n]
-				) * self._w_clustering[t]
-				for t in self.time_series
-			)
-			+ p_cont[n] * self._l_cont[n] * self._nr_dates
-			+ p_gn_new[n] * self._l_gic[n] * self._nr_dates
-			+ e_bn_new[n] * self._l_bic[n] * self._nr_dates
-			for n in self.set_meters
+						for n in self.set_meters
+					) * self._w_clustering[t]
+					for t in self.time_series
+				) +
+				lpSum(
+					p_cont[n] * self._l_cont[n] * self._nr_dates
+					+ p_gn_new[n] * self._l_gic[n] * self._nr_dates
+					+ e_bn_new[n] * self._l_bic[n] * self._nr_dates
+					for n in self.set_meters
+				)
 		)
 		self.milp += objective, 'Objective Function'
 
@@ -856,6 +862,8 @@ class CollectiveMILPPool:
 
 		outputs['obj_value'] = round(self.obj_value, 3)
 		outputs['milp_status'] = self.status
+		outputs['nr_dates'] = self._nr_dates
+		outputs['w_clustering'] = self._w_clustering
 
 		outputs['p_cont'] = {meter_id: None for meter_id in self.set_meters}
 		outputs['p_gn_new'] = {meter_id: None for meter_id in self.set_meters}
@@ -877,6 +885,7 @@ class CollectiveMILPPool:
 		outputs['e_consumed'] = dict_none_lists(self.time_intervals, self.set_meters)
 		outputs['e_alc'] = dict_none_lists(self.time_intervals, self.set_meters)
 		outputs['delta_slc'] = dict_none_lists(self.time_intervals, self.set_meters)
+
 		for n in self.set_meters:
 			meter_btm_ev = self._meters_data[n].get('btm_evs')
 			if meter_btm_ev is not None:
