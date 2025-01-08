@@ -59,11 +59,3 @@ class OutputsCollectivePoolDict(TypedDict):
 	delta_meter_balance: ListPerId
 	c_ind2pool: ValuePerId
 	dual_prices: list[float]
-	ev_stored: Union[ListPerIdPerId, None]
-	p_ev_charge: Union[ListPerIdPerId, None]
-	p_ev_discharge: Union[ListPerIdPerId, None]
-	ewh_temp: Union[ListPerIdPerId, None]
-	ewh_delta_in: Union[ListPerIdPerId, None]
-	ewh_optimized_load: Union[ListPerIdPerId, None]
-	ewh_original_load: Union[ListPerIdPerId, None]
-	ewh_delta_use: Union[ListPerIdPerId, None]

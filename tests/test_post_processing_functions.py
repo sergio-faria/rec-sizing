@@ -11,8 +11,6 @@ from rec_sizing.optimization.structures.I_O_collective_pool_milp_postprocessing 
 from rec_sizing.optimization_functions import *
 from rec_sizing.post_processing_functions import *
 
-# backpack = BackpackCollectivePoolDict
-# w_clustering = backpack.get('w_clustering')
 
 def test_collective_pool_milp_postprocessing():
     """optimization"""

@@ -6,7 +6,6 @@ import itertools
 import numpy as np
 import os
 import re
-import pickle
 
 from rec_sizing.configs.configs import (
 	MIPGAP,
@@ -17,7 +16,6 @@ from rec_sizing.optimization.helpers.milp_helpers import (
 	dict_none_lists,
 	dict_per_param,
 	none_lists,
-	round_up,
 	time_intervals
 )
 from rec_sizing.custom_types.collective_milp_pool_types import (
@@ -85,18 +83,6 @@ class CollectiveMILPPool:
 		self._soc_max = None  # maximum state of charge of the storage systems in the meter [%]
 		self._deg_cost = None  # degradation cost for the BESS [€/kWh]
 		self._big_m = None  # a very big number [kWh]
-		# EVs data
-		self.sets_btm_ev = {}
-		self._trip_ev = {}  # EV energy consumption, in kWh
-		self._min_energy_storage_ev = {}  # Minimum stored energy to be guaranteed for vehicle ev at CPE n, in kWh
-		self._battery_capacity_ev = {}  # The battery energy capacity of vehicle ev at CPE n, in kWh
-		self._eff_bc_ev = {}  # Charging efficiency of vehicle ev at CPE n, between 0 and 1
-		self._eff_bd_ev = {}  # Discharging efficiency of vehicle ev at CPE n, between 0 and 1
-		self._init_e_ev = {}  # the initial energy content of the EV, in kWh
-		self._pmax_c_ev = {}  # Maximum power charge of vehicle ev at CPE n, in kW
-		self._pmax_d_ev = {}  # Maximum power discharge of vehicle ev at CPE n, in kW
-		self._bin_ev = {}  # Whether a vehicle ev at CPE n is plugged-in or not (if plugged-in = 1 else = 0)
-		self._small_m = None  # a very small number, to avoid infeasibility in big M constraints [kWh]
 		# MILP variables
 		self.solver = solver  # solver chosen for the MILP
 		self.timeout = timeout  # solvers temporal limit to find optimal solution (s)
@@ -112,32 +98,6 @@ class CollectiveMILPPool:
 		self.time_series = None  # for a range of time intervals
 		self.time_24_subseries = None  # for a subrange of time intervals that sinalize the end of each day
 		self.set_meters = None  # set with Meters' ID
-		# EWH
-		self._ewh_paramsInput = {}
-		self._ewh_dataset = {}
-		self.set_ewh = {}
-		self.wh_init = {}
-		self.ewh_power = {}
-		self.delta_t = {}
-		self.ewh_start_temp = {}
-		self.ewh_capacity = {}
-		self.waterHeatCap = {}
-		self.heatTransferCoeff = {}
-		self.ewh_area = {}
-		self.ambTemp = {}
-		self.wh_min = {}
-		self.wh_max = {}
-		self.ewh_min_temp = {}
-		self.ewh_max_temp = {}
-		self.delta_use = {}
-		self.tempSet = {}
-		self.bigNumber = {}
-		self.regressor_aboveSet_m_temp = {}
-		self.regressor_aboveSet_m_delta = {}
-		self.regressor_aboveSet_b = {}
-		self.regressor_belowSet_m_temp = {}
-		self.regressor_belowSet_m_delta = {}
-		self.regressor_belowSet_b = {}
 
 	def __define_milp(self):
 		"""
@@ -183,83 +143,6 @@ class CollectiveMILPPool:
 		self._eff_bd = dict_per_param(self._meters_data, 'eff_bd')
 		self._soc_max = dict_per_param(self._meters_data, 'soc_max')
 		self._deg_cost = dict_per_param(self._meters_data, 'deg_cost')
-		# EVs data
-		for n in self.set_meters:
-			meter_btm_ev = self._meters_data[n].get('btm_evs')
-			if meter_btm_ev is not None:
-				self.sets_btm_ev[n] = list(meter_btm_ev.keys())
-				self._trip_ev[n] = {ev: meter_btm_ev[ev]['trip_ev'] for ev in self.sets_btm_ev[n]}
-				self._min_energy_storage_ev[n] = {ev: meter_btm_ev[ev]['min_energy_storage_ev']
-												  for ev in self.sets_btm_ev[n]}
-				self._battery_capacity_ev[n] = {ev: meter_btm_ev[ev]['battery_capacity_ev']
-												for ev in self.sets_btm_ev[n]}
-				self._eff_bc_ev[n] = {ev: meter_btm_ev[ev]['eff_bc_ev'] for ev in self.sets_btm_ev[n]}
-				self._eff_bd_ev[n] = {ev: meter_btm_ev[ev]['eff_bd_ev'] for ev in self.sets_btm_ev[n]}
-				self._init_e_ev[n] = {ev: meter_btm_ev[ev]['init_e_ev'] for ev in self.sets_btm_ev[n]}
-				self._pmax_c_ev[n] = {ev: meter_btm_ev[ev]['pmax_c_ev'] for ev in self.sets_btm_ev[n]}
-				self._pmax_d_ev[n] = {ev: meter_btm_ev[ev]['pmax_d_ev'] for ev in self.sets_btm_ev[n]}
-				self._bin_ev[n] = {ev: meter_btm_ev[ev]['bin_ev'] for ev in self.sets_btm_ev[n]}
-			else:
-				self.sets_btm_ev[n] = []
-		# EWH
-		# unpack variables
-		for n in self.set_meters:
-			try:
-				self._ewh = self._meters_data[n]['ewh']
-			except KeyError:
-				self._ewh = None
-			if self._ewh is not None:
-				self.set_ewh[n] = list(self._ewh.keys())
-				self._ewh_paramsInput[n] = {e: self._ewh[e]['params_input'] for e in self.set_ewh[n]}
-				self._ewh_dataset[n] = {e: self._ewh[e]['dataset'] for e in self.set_ewh[n]}
-			else:
-				self.set_ewh[n] = []
-
-		if bool(self._ewh_dataset):
-			# create EWH varBackpacks
-			from rec_sizing.ewh.ewh_flex import ewh_preparation
-			global varBackpack
-
-			varBackpack = {}
-			for n in self.set_meters:
-				self._ewh = self._meters_data[n]['ewh']
-
-				if self._ewh is not None:
-					varBackpack[n] = {
-						e: ewh_preparation(self._ewh_paramsInput[n][e], self._ewh_dataset[n][e], resample='1h')
-						for e in self.set_ewh[n]
-					}
-
-					self.wh_init[n] = {e: varBackpack[n][e]['wh_init'] for e in self.set_ewh[n]}
-					self.ewh_power[n] = {e: varBackpack[n][e]['ewh_power'] for e in self.set_ewh[n]}
-					self.delta_t[n] = {e: varBackpack[n][e]['delta_t'] for e in self.set_ewh[n]}
-					self.ewh_start_temp[n] = {e: varBackpack[n][e]['ewh_start_temp'] for e in self.set_ewh[n]}
-					self.ewh_capacity[n] = {e: varBackpack[n][e]['ewh_capacity'] for e in self.set_ewh[n]}
-					self.waterHeatCap[n] = {e: varBackpack[n][e]['waterHeatCap'] for e in self.set_ewh[n]}
-					self.heatTransferCoeff[n] = {e: varBackpack[n][e]['heatTransferCoeff'] for e in self.set_ewh[n]}
-					self.ewh_area[n] = {e: varBackpack[n][e]['ewh_area'] for e in self.set_ewh[n]}
-					self.ambTemp[n] = {e: varBackpack[n][e]['ambTemp'] for e in self.set_ewh[n]}
-					self.wh_min[n] = {e: varBackpack[n][e]['wh_min'] for e in self.set_ewh[n]}
-					self.wh_max[n] = {e: varBackpack[n][e]['wh_max'] for e in self.set_ewh[n]}
-					self.ewh_min_temp[n] = {e: varBackpack[n][e]['ewh_min_temp'] for e in self.set_ewh[n]}
-					self.ewh_max_temp[n] = {e: varBackpack[n][e]['ewh_max_temp'] for e in self.set_ewh[n]}
-					self.delta_use[n] = {e: varBackpack[n][e]['delta_use'] for e in self.set_ewh[n]}
-					self.tempSet[n] = {e: varBackpack[n][e]['tempSet'] for e in self.set_ewh[n]}
-					self.bigNumber[n] = {e: varBackpack[n][e]['bigNumber'] for e in self.set_ewh[n]}
-					self.regressor_aboveSet_m_temp[n] = \
-						{e: varBackpack[n][e]['regressor_aboveSet_m_temp'] for e in self.set_ewh[n]}
-					self.regressor_aboveSet_m_delta[n] = \
-						{e: varBackpack[n][e]['regressor_aboveSet_m_delta'] for e in self.set_ewh[n]}
-					self.regressor_aboveSet_b[n] = \
-						{e: varBackpack[n][e]['regressor_aboveSet_b'] for e in self.set_ewh[n]}
-					self.regressor_belowSet_m_temp[n] = \
-						{e: varBackpack[n][e]['regressor_belowSet_m_temp'] for e in self.set_ewh[n]}
-					self.regressor_belowSet_m_delta[n] = \
-						{e: varBackpack[n][e]['regressor_belowSet_m_delta'] for e in self.set_ewh[n]}
-					self.regressor_belowSet_b[n] = \
-						{e: varBackpack[n][e]['regressor_belowSet_b'] for e in self.set_ewh[n]}
-				else:
-					varBackpack[n] = []
 
 		# Initialize the decision variables
 		# contracted power tariff by n [kW]
@@ -300,13 +183,6 @@ class CollectiveMILPPool:
 		e_alc = dict_none_lists(self.time_intervals, self.set_meters)
 		# auxiliary binary variable for defining self-consumed energy by n
 		delta_slc = dict_none_lists(self.time_intervals, self.set_meters)
-		# EV decision variables
-		# energy stored in ev [kWh]
-		ev_stored = {n: dict_none_lists(self.time_intervals, self.sets_btm_ev[n]) for n in self.set_meters}
-		# power charge of ev [kW]
-		p_ev_charge = {n: dict_none_lists(self.time_intervals, self.sets_btm_ev[n]) for n in self.set_meters}
-		# power discharge of ev [kW]
-		p_ev_discharge = {n: dict_none_lists(self.time_intervals, self.sets_btm_ev[n]) for n in self.set_meters}
 		if self.strict_pos_coeffs:
 			# auxiliary binary variable for imposing positive allocation coefficients
 			delta_coeff = dict_none_lists(self.time_intervals, self.set_meters)
@@ -315,18 +191,6 @@ class CollectiveMILPPool:
 			delta_rec_balance = none_lists(self.time_intervals)
 			# auxiliary binary variable for signaling if a meter has a surplus or a deficit
 			delta_meter_balance = dict_none_lists(self.time_intervals, self.set_meters)
-
-		# EWH - Initialize decision variables
-		if bool(self._ewh_dataset):
-			temp = {n: dict_none_lists(self.time_intervals, self.set_ewh[n]) for n in self.set_meters}
-			w_tot = {n: dict_none_lists(self.time_intervals, self.set_ewh[n]) for n in self.set_meters}
-			w_in = {n: dict_none_lists(self.time_intervals, self.set_ewh[n]) for n in self.set_meters}
-			w_loss = {n: dict_none_lists(self.time_intervals, self.set_ewh[n]) for n in self.set_meters}
-			delta_in = {n: dict_none_lists(self.time_intervals, self.set_ewh[n]) for n in self.set_meters}
-			w_water = {n: dict_none_lists(self.time_intervals, self.set_ewh[n]) for n in self.set_meters}
-			costComfort = {n: dict_none_lists(self.time_intervals, self.set_ewh[n]) for n in self.set_meters}
-			binAux = {n: dict_none_lists(self.time_intervals, self.set_ewh[n]) for n in self.set_meters}
-			energyEWH = {n: dict_none_lists(self.time_intervals, self.set_ewh[n]) for n in self.set_meters}
 
 		# Define the decision variables as puLP objets
 		if self.total_share_coeffs:
@@ -363,35 +227,6 @@ class CollectiveMILPPool:
 				delta_coeff[n][t] = LpVariable('delta_coeff_' + increment, cat=LpBinary)
 			if self.total_share_coeffs:
 				delta_meter_balance[n][t] = LpVariable('delta_meter_balance_' + increment, cat=LpBinary)
-			# EV variables
-			for ev in self.sets_btm_ev[n]:
-				increment = f'{n}_{ev}_t{t:07d}'
-				ev_stored[n][ev][t] = LpVariable('ev_stored_' + increment, lowBound=0)
-				p_ev_charge[n][ev][t] = LpVariable('p_ev_charge_' + increment, lowBound=0)
-				p_ev_discharge[n][ev][t] = LpVariable('p_ev_discharge_' + increment, lowBound=0)
-
-			# EWH decision variables
-			if bool(self._ewh_dataset):
-				for e in self.set_ewh[n]:
-					increment = f'{n}_{e}_t{t:07d}'
-					# Temperature of water at EWH outlet at the beginning of time interval t (°C)
-					temp[n][e][t] = LpVariable(f'temp_' + increment, lowBound=0)
-					# Total energy balance of prosumer’s EWH at time interval t (kWh)
-					w_tot[n][e][t] = LpVariable(f'w_tot_' + increment, lowBound=0)
-					# Energy into the prosumer’s EWH at time interval t (kWh)
-					w_in[n][e][t] = LpVariable(f'w_in_' + increment, lowBound=0)
-					# Thermal energy losses at time interval t (kWh)
-					w_loss[n][e][t] = LpVariable(f'w_loss_' + increment)
-					# Binary variable for EWH operation status (1 = ON, 0 = OFF)
-					delta_in[n][e][t] = LpVariable(f'delta_in_' + increment, lowBound=0, upBound=1)
-					# Amount of energy stored in the EWH after usage and mixing with inlet
-					w_water[n][e][t] = LpVariable(f'w_water_' + increment, lowBound=0)
-					# Extra cost associated with water temperature reaching below comfort
-					costComfort[n][e][t] = LpVariable(f'costComfort_' + increment, lowBound=0)
-					# Binary Variable for if-else expression 15
-					binAux[n][e][t] = LpVariable(f'binAux_' + increment, cat=LpBinary)
-					# Pricing of that specific energy usage
-					energyEWH[n][e][t] = LpVariable(f'energyEWH_' + increment, lowBound=0)
 
 		# Eq. 1: Objective Function
 		objective = (
@@ -400,10 +235,6 @@ class CollectiveMILPPool:
 						e_sup[n][t] * self._l_buy[n][t]
 						- e_sur[n][t] * self._l_sell[n][t]
 						+ e_slc[n][t] * self._l_grid[t]
-						+ lpSum(
-							costComfort[n][e][t] * 100
-							for e in self.set_ewh[n]
-						)
 						+ e_bd[n][t] * self._deg_cost[n]
 						for n in self.set_meters
 					) * self._w_clustering[t]
@@ -482,9 +313,7 @@ class CollectiveMILPPool:
 			# UPDATED WITH DISAGREGGATED EWH MODULES (ORIGINAL AND OPTIMIZED LOADS)
 			self.milp += \
 				e_cmet[n][t] == \
-				self._e_c[n][t] - e_g[n][t] + e_bc[n][t] - e_bd[n][t] + \
-				lpSum(p_ev_charge[n][ev][t] - p_ev_discharge[n][ev][t] for ev in self.sets_btm_ev[n]) + \
-				lpSum(- varBackpack[n][e]['original_load'][t] + energyEWH[n][e][t] for e in self.set_ewh[n]), \
+				self._e_c[n][t] - e_g[n][t] + e_bc[n][t] - e_bd[n][t], \
 				'C_met_' + increment
 
 			# Eq. 3
@@ -631,148 +460,6 @@ class CollectiveMILPPool:
 							1 - delta_rec_balance[t] + delta_meter_balance[n][t]), \
 					'Buy_all_deficit_high_' + increment
 
-			# EVs constraints
-			for ev in self.sets_btm_ev[n]:
-				increment = f'{n}_{ev}_t{t:07d}'
-				# Eq. 41
-				if t == 0:
-					self.milp += ev_stored[n][ev][t] == \
-								 self._init_e_ev[n][ev] + \
-								 self._eff_bc_ev[n][ev] * p_ev_charge[n][ev][t] - \
-								 (1 / self._eff_bd_ev[n][ev]) * p_ev_discharge[n][ev][t] - \
-								 self._trip_ev[n][ev][t], \
-						'EV_balance_' + increment
-				else:
-					self.milp += ev_stored[n][ev][t] == \
-								 ev_stored[n][ev][t - 1] + \
-								 self._eff_bc_ev[n][ev] * p_ev_charge[n][ev][t] - \
-								 (1 / self._eff_bd_ev[n][ev]) * p_ev_discharge[n][ev][t] - \
-								 self._trip_ev[n][ev][t], \
-						'EV_balance_' + increment
-
-				# Eq. 42
-				self.milp += (1 / self._eff_bd_ev[n][ev]) * p_ev_discharge[n][ev][t] <= \
-							 self._pmax_d_ev[n][ev] * self._bin_ev[n][ev][t] * self._delta_t, \
-					'EV_Discharging_limit_' + increment
-
-				# Eq. 43
-				self.milp += self._eff_bc_ev[n][ev] * p_ev_charge[n][ev][t] <= \
-							 self._pmax_c_ev[n][ev] * self._bin_ev[n][ev][t] * self._delta_t, \
-					'EV_Charging_limit_' + increment
-
-				# Eq. 44
-				self.milp += ev_stored[n][ev][t] <= self._battery_capacity_ev[n][ev], 'EV_Max_capacity_' + increment
-
-				# Eq. 45
-				self.milp += ev_stored[n][ev][t] >= self._min_energy_storage_ev[n][ev], 'EV_Min_capacity_' + increment
-
-		# EWH constraints
-		if bool(self._ewh_dataset):
-			for n, t in itertools.product(self.set_meters, self.time_series):
-				for e in self.set_ewh[n]:
-					# Eq. (1)
-					if t == 0:
-						self.milp += w_tot[n][e][t] == self.wh_init[n][e], \
-							f'Constraint_1_{n}_{e}_{t:07d}'
-					else:
-						self.milp += w_tot[n][e][t] == w_water[n][e][t - 1] + w_in[n][e][t - 1] - w_loss[n][e][t - 1], \
-							f'Constraint_1_{n}_{e}_{t:07d}'
-					# Eq. (2)
-					self.milp += \
-						w_in[n][e][t] == \
-						self.ewh_power[n][e] * self.delta_t[n][e] * delta_in[n][e][t] * self.delta_t[n][e] * 60, \
-							f'Constraint_2_{n}_{e}_{t:07d}'
-					# Eq. (3) Pricing/Energy
-					self.milp += energyEWH[n][e][t] == delta_in[n][e][t] * self.ewh_power[n][e] * self.delta_t[n][e], \
-						f'Constraint_3_{n}_{e}_{t:07d}'
-					# Eq. (4)
-					if t == 0:
-						self.milp += temp[n][e][t] == self.ewh_start_temp[n][e], f'Constraint_4_{n}_{e}_{t:07d}'
-					else:
-						self.milp += \
-							temp[n][e][t] == \
-							w_tot[n][e][t] * 3600 / \
-							(self.delta_t[n][e] * 60) / \
-							(self.ewh_capacity[n][e] * self.waterHeatCap[n][e]), \
-								f'Constraint_4_{n}_{e}_{t:07d}'
-					# Eq. (5)
-					self.milp += \
-						w_loss[n][e][t] == \
-						self.heatTransferCoeff[n][e] * \
-						self.ewh_area[n][e] * \
-						(temp[n][e][t] - self.ambTemp[n][e]) * \
-						self.delta_t[n][e] * \
-						self.delta_t[n][e] * 60, \
-							f'Constraint_5_{n}_{e}_{t:07d}'
-					# Eq. (6)
-					self.milp += self.wh_min[n][e] <= w_tot[n][e][t], f'Constraint_6.1_{n}_{e}_{t:07d}'
-					self.milp += w_tot[n][e][t] <= self.wh_max[n][e], f'Constraint_6.2_{n}_{e}_{t:07d}'
-					self.milp += self.ewh_min_temp[n][e] <= temp[n][e][t], f'Constraint_6.3_{n}_{e}_{t:07d}'
-					self.milp += temp[n][e][t] <= self.ewh_max_temp[n][e], f'Constraint_6.4_{n}_{e}_{t:07d}'
-
-					# Eq.(7) assure that in the (t) period after the end of hot water usage (t-1),
-					# the EWH has, at least, 80L @ 45ºC [n][e][t]
-					if (self.delta_use[n][e][t] - self.delta_use[n][e][t - 1] != 0) & \
-							(self.delta_use[n][e][t] - self.delta_use[n][e][t - 1] == -self.delta_use[n][e][t-1]):
-						# if delta_use[n][e][t] - delta_use[t-1] < 0:
-						self.milp += \
-							w_tot[n][e][t] >= \
-							self.tempSet[n][e] * 1.005 * \
-							self.ewh_capacity[n][e] * \
-							self.waterHeatCap[n][e] / 3600 * \
-							self.delta_t[n][e] * 60 - \
-							costComfort[n][e][t], \
-								f'Constraint_7.1_{n}_{e}_{t:07d}'
-						self.milp += \
-							w_tot[n][e][t-1] >= \
-							self.tempSet[n][e] * 1.005 * \
-							self.ewh_capacity[n][e] * \
-							self.waterHeatCap[n][e] / 3600 * \
-							self.delta_t[n][e] * 60 - \
-							costComfort[n][e][t-1], \
-								f'Constraint_7.2_{n}_{e}_{t:07d}'
-
-					# Eq.(8) Internal water energy after usage
-					if self.delta_use[n][e][t] > 0:
-						# binary definition with temp[n][e][t]
-						self.milp += temp[n][e][t] >= \
-									 self.tempSet[n][e] - self.bigNumber[n][e] * (1 - binAux[n][e][t]), \
-							f'Constraint_8.1_{n}_{e}_{t:07d}'
-						self.milp += temp[n][e][t] <= \
-									 self.tempSet[n][e] + self.bigNumber[n][e] * binAux[n][e][t], \
-							f'Constraint_8.2_{n}_{e}_{t:07d}'
-						# if temp[n][e][t] > tempSet
-						self.milp += w_water[n][e][t] >= \
-									 self.regressor_aboveSet_m_temp[n][e] * temp[n][e][t] + \
-									 self.regressor_aboveSet_m_delta[n][e] * self.delta_use[n][e][t] + \
-									 self.regressor_aboveSet_b[n][e] - \
-									 self.bigNumber[n][e] * (1 - binAux[n][e][t]), \
-							f'Constraint_8.3_{n}_{e}_{t:07d}'
-						self.milp += w_water[n][e][t] <= \
-									 self.regressor_aboveSet_m_temp[n][e] * temp[n][e][t] + \
-									 self.regressor_aboveSet_m_delta[n][e] * self.delta_use[n][e][t] + \
-									 self.regressor_aboveSet_b[n][e] + \
-									 self.bigNumber[n][e] * (1 - binAux[n][e][t]), \
-							f'Constraint_8.4_{n}_{e}_{t:07d}'
-						# else
-						self.milp += w_water[n][e][t] >= \
-									 self.regressor_belowSet_m_temp[n][e] * temp[n][e][t] + \
-									 self.regressor_belowSet_m_delta[n][e] * self.delta_use[n][e][t] + \
-									 self.regressor_belowSet_b[n][e] - \
-									 self.bigNumber[n][e] * binAux[n][e][t], \
-							f'Constraint_8.5_{n}_{e}_{t:07d}'
-						self.milp += w_water[n][e][t] <= \
-									 self.regressor_belowSet_m_temp[n][e] * temp[n][e][t] + \
-									 self.regressor_belowSet_m_delta[n][e] * self.delta_use[n][e][t] + \
-									 self.regressor_belowSet_b[n][e] + \
-									 self.bigNumber[n][e] * binAux[n][e][t], \
-							f'Constraint_8.6_{n}_{e}_{t:07d}'
-					else:
-						self.milp += w_water[n][e][t] == \
-									 temp[n][e][t] * self.ewh_capacity[n][e] * self.waterHeatCap[n][e] / 3600 * \
-									 self.delta_t[n][e] * 60, \
-							f'Constraint_8.7_{n}_{e}_{t:07d}'
-
 		# Write MILP to .lp file
 		dir_name = os.path.abspath(os.path.join(__file__, '..'))
 		lp_file = os.path.join(dir_name, f'Stage2Pool.lp')
@@ -886,53 +573,16 @@ class CollectiveMILPPool:
 		outputs['e_alc'] = dict_none_lists(self.time_intervals, self.set_meters)
 		outputs['delta_slc'] = dict_none_lists(self.time_intervals, self.set_meters)
 
-		for n in self.set_meters:
-			meter_btm_ev = self._meters_data[n].get('btm_evs')
-			if meter_btm_ev is not None:
-				outputs['ev_stored'] = {n: dict_none_lists(self.time_intervals, self.sets_btm_ev[n]) for n in
-										self.set_meters}
-				outputs['p_ev_charge'] = {n: dict_none_lists(self.time_intervals, self.sets_btm_ev[n]) for n in
-										  self.set_meters}
-				outputs['p_ev_discharge'] = {n: dict_none_lists(self.time_intervals, self.sets_btm_ev[n]) for n in
-											 self.set_meters}
-
 		if self.strict_pos_coeffs:
 			outputs['delta_coeff'] = dict_none_lists(self.time_intervals, self.set_meters)
 		if self.total_share_coeffs:
 			outputs['delta_rec_balance'] = none_lists(self.time_intervals)
 			outputs['delta_meter_balance'] = dict_none_lists(self.time_intervals, self.set_meters)
 
-		# EVs______________________________________________________________________________________________
-		# Required when vars include "-" since puLP converts it to "_"
-		btm_ev_ids = [bid for bids in [v for _, v in self.sets_btm_ev.items()] for bid in bids]
-		matchd = {key: key.replace('-', '_') for key in self.set_meters}
-		ev_matchd = {key: key.replace('-', '_') for key in btm_ev_ids}
-
-		original_ev_name = \
-			lambda v_name: [ori_ev for ori_ev in btm_ev_ids if ev_matchd[ori_ev] + '_' in v_name][0]
-		# EVs______________________________________________________________________________________________
-
 		# required when vars include "-" since puLP converts it to "_"
 		matchd = {key: key.replace('-', '_') for key in self.set_meters}
 		rematchd = {v: k for k, v in matchd.items()}
 		var_name = lambda v_str, n_str: rematchd[v_str.split(n_str)[-1]]
-
-		# EWH outputs
-		if bool(self._ewh_dataset):
-			outputs['ewh_temp'] = {n: dict_none_lists(self.time_intervals, self.set_ewh[n]) for n in self.set_meters}
-			outputs['ewh_delta_in'] = {n: dict_none_lists(self.time_intervals, self.set_ewh[n]) for n in
-									   self.set_meters}
-			outputs['ewh_optimized_load'] = {n: dict_none_lists(self.time_intervals, self.set_ewh[n]) for n in
-											 self.set_meters}
-			outputs['ewh_original_load'] = {n: dict_none_lists(self.time_intervals, self.set_ewh[n]) for n in
-											self.set_meters}
-			outputs['ewh_delta_use'] = {n: dict_none_lists(self.time_intervals, self.set_ewh[n]) for n in
-										self.set_meters}
-
-			ewh_ids = [bid for bids in [v for _, v in self.set_ewh.items()] for bid in bids]
-			e_matchd = {key: key.replace('-', '_') for key in ewh_ids}
-			original_e_name = lambda v_name: [ori_e for ori_e in ewh_ids if e_matchd[ori_e] + '_' in v_name][0]
-			original_n_name = lambda v_name: [ori_n for ori_n in self.set_meters if matchd[ori_n] + '_' in v_name][0]
 
 		for v in self.milp.variables():
 			if re.search('dummy', v.name):
@@ -962,20 +612,6 @@ class CollectiveMILPPool:
 				elif re.search(f'e_cmet_', v.name):
 					n = var_name(v_name_reduced, 'e_cmet_')
 					outputs['e_cmet'][n][step_nr] = v.varValue
-
-				elif re.search(f'ev_stored_', v.name):
-					n = v.name.split('ev_stored_')[1].split('_EV')[0]
-					ev = original_ev_name(v.name)
-					outputs['ev_stored'][n][ev][step_nr] = v.varValue
-				elif re.search(f'p_ev_charge_', v.name):
-					n = v.name.split('p_ev_charge_')[1].split('_EV')[0]
-					ev = original_ev_name(v.name)
-					outputs['p_ev_charge'][n][ev][step_nr] = v.varValue
-				elif re.search(f'p_ev_discharge_', v.name):
-					n = v.name.split('p_ev_discharge_')[1].split('_EV')[0]
-					ev = original_ev_name(v.name)
-					outputs['p_ev_discharge'][n][ev][step_nr] = v.varValue
-
 				elif re.search(f'e_g_', v.name):
 					n = var_name(v_name_reduced, 'e_g_')
 					outputs['e_g'][n][step_nr] = v.varValue
@@ -1021,19 +657,6 @@ class CollectiveMILPPool:
 				elif re.search(f'delta_meter_balance', v.name):
 					n = var_name(v_name_reduced, 'delta_meter_balance_')
 					outputs['delta_meter_balance'][n][step_nr] = v.varValue
-
-				# EWH outputs
-				elif re.search(f'temp_', v.name):
-					n = original_n_name(v.name)
-					e = original_e_name(v.name)
-					outputs['ewh_temp'][n][e][step_nr] = v.varValue
-				elif re.search(f'delta_in_', v.name):
-					n = original_n_name(v.name)
-					e = original_e_name(v.name)
-					outputs['ewh_delta_in'][n][e][step_nr] = v.varValue
-					outputs['ewh_optimized_load'][n][e][step_nr] = v.varValue * varBackpack[n][e]['ewh_power']
-					outputs['ewh_original_load'][n][e] = varBackpack[n][e]['original_load']
-					outputs['ewh_delta_use'][n][e] = varBackpack[n][e]['delta_use']
 
 		# Include other individual cost metrics
 		outputs['c_ind2pool'] = {n: None for n in self.set_meters}

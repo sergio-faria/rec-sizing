@@ -170,39 +170,6 @@ def run_pre_collective_pool_milp(
 				'eff_bd': a fixed value, between 0 and 1, that expresses the discharging efficiency of the BESS
 				'soc_max': a percentage, applicable to "e_bn", identifying a maximum limit to the energy content
 				'deg_cost': a float representing a penalty for cyclic degradation of the BESS, in €/kWh
-				'btm_evs': structure where several Btm EVs units can be defined
-					#EV_id: {
-						'trip_ev': EV energy consumption, in kWh
-						'min_energy_storage_ev': Minimum stored energy to be guaranteed for vehicle ev at CPE n, in kWh
-						'battery_capacity_ev': The battery energy capacity of vehicle ev at CPE n, in kWh
-						'eff_bc_ev': Charging efficiency of vehicle ev at CPE n, between 0 and 1
-						'eff_bd_ev': Discharging efficiency of vehicle ev at CPE n, between 0 and 1
-						'init_e_ev': the initial energy content of the EV, in kWh
-						'pmax_c_ev': Maximum power charge of vehicle ev at CPE n, in kW
-						'pmax_d_ev': Maximum power discharge of vehicle ev at CPE n, in kW
-						'bin_ev': Whether a vehicle ev at CPE n is plugged-in or not (if plugged-in = 1 else = 0)
-							}
-				'ewh': structure where several EWH units can be defined
-						'params_input': structure for EWH static parameters
-							'load_diagram_exists': boolean variable that states if the provided dataset is the actual
-													diagram (1), or the estimated hot water usage calendar (0)
-							'ewh_specs': structure for EWH specifications
-								'ewh_capacity': EWH capacity (l)
-								'ewh_power': EWH heating power (W)
-								'ewh_max_temp': EWH maximum allowed water temperature (°C)
-								'ewh_std_temp': EWH standard non-optimized functioning water temperature (°C)
-								'user_comf_temp': Hot-Water Usage Comfort Temperature (minimum user-defined temperature - °C)
-								'tariff': Tariff selection between simple (1) or dual (2)
-								'price_simple': Simple pricing value per kWh (Euro)
-								'price_dual_day': Dual day pricing value per kWh (Euro)
-								'price_dual_night': Dual night pricing value per kWh (Euro)
-								'tariff_simple':  Fixed daily simple tariff pricing (Euro)
-								'tariff_dual': Fixed daily dual tariff pricing (Euro)
-						'dataset': contains the actual EWH dataset. The user can provide the real load time-series, or
-									the estimated hot-water usage calendar. The load time-series should respect a 1-min
-									measurement resolution, with 'timestamp' and 'load' pairwise keys. The estimated
-									usage should have the usages starting timestamp in the 'start' key, and the duration
-									in the 'duration' key.
 			}
 		}
 	}
@@ -248,12 +215,6 @@ def run_pre_collective_pool_milp(
 		'c_ind2pool': dict of floats with the individual costs with energy for the optimization horizon, in €;
 			positive values are costs, negative values are profits
 		'dual_prices: float array with the market equilibrium shadow prices to be used as LEM prices, in €/kWh
-		'ewh_temp' dict of floats fot EWH internal water temperature, per time step, per meter
-		'ewh_delta_in': dict of floats for EWH Functioning (ON/OFF) Calendar (relative to the used resolution),
-			per time step, per meter
-		'ewh_delta_use' dict of bool with EWH hot water usage, per time step, per meter
-		'ewh_optimized_load': dict of floats for EWH optimized load diagram, per time step, per meter
-		'ewh_original_load': dict of floats for EWH original load diagram, per time step, per meter
 	}
 	"""
 	logger.info('Running a pre-delivery standalone/second stage collective (pool) MILP...')
