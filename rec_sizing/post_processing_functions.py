@@ -1,6 +1,7 @@
 from loguru import logger
 from rec_sizing.optimization.module.post_processing import *
 
+
 def run_post_processing(results_opt, inputs_opt, inputs_pp):
     """
     Use this functions to compute a post-processing results for a given optimized renewable energy community (REC)
@@ -24,7 +25,7 @@ def run_post_processing(results_opt, inputs_opt, inputs_pp):
             {
                 #meter_id: unique meter identifier requested in optimization process
                 {
-				    #member_id: unique REC member identifier that contains the meter/member pair ownership value [0;1]
+                    #member_id: unique REC member identifier that contains the meter/member pair ownership value [0;1]
                 }
             }
         }
@@ -43,7 +44,8 @@ def run_post_processing(results_opt, inputs_opt, inputs_pp):
         'PV_investments_cost': dict of floats with the investments costs in PV per installation for the
             optimization horizon, in €;
         'sold_position': dict containing a list of floats with the energy trades (sells - purchases) in the internal
-            market (REC) per installation for each timestamp, in kWh; positive values are sells and negative are purchases
+            market (REC) per installation for each timestamp, in kWh;
+            positive values are sells and negative are purchases
         'internal_market': dict containing a list of floats with the energy trades costs in the internal market (REC)
             per installation for each timestamp, in €; positive values are costs and negative are profits
         'installation_cost_compensations': dict of floats with the installation costs compensated with the internal
@@ -61,7 +63,8 @@ def run_post_processing(results_opt, inputs_opt, inputs_pp):
     desegregated_costs = desegregated_OF_costs(results_opt, inputs_opt)
 
     logger.info('Compute the internal market compensations (pool)')
-    # the internal market compensations per installations are added to the previous output structure (desegregated_costs)
+    # the internal market compensations per installations are added to the previous output structure
+    # (desegregated_costs)
     IM_compensations = post_processing_InternalMarket(desegregated_costs, inputs_opt)
 
     logger.info('Compute the REC costs per member (pool)')
@@ -71,4 +74,3 @@ def run_post_processing(results_opt, inputs_opt, inputs_pp):
     logger.info('post-processing (pool)... DONE!')
 
     return members_costs
-

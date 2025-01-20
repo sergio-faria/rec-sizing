@@ -9,6 +9,7 @@ import numpy as np
 
 from rec_sizing.optimization.helpers.milp_helpers import (dict_none_lists, time_intervals)
 
+
 def desegregated_OF_costs(results, inputs_opt):
 
     set_meters = list(inputs_opt['meters'])
@@ -24,18 +25,59 @@ def desegregated_OF_costs(results, inputs_opt):
     for n in set_meters:
         increment = f'{n}'
         # Exchanges costs with the main grid (buying and selling energy)
-        results['retailer_exchanges_cost'][n] = round(sum((np.array(results['e_sup'][n]) * np.array(inputs_opt['meters'][n]['l_buy']) -
-                                                           np.array(results['e_sur'][n]) * np.array(inputs_opt['meters'][n]['l_sell'])) * results['w_clustering']), 5)
+        results['retailer_exchanges_cost'][n] = (
+            round(
+                sum(
+                    (
+                            np.array(results['e_sup'][n]) * np.array(inputs_opt['meters'][n]['l_buy']) -
+                            np.array(results['e_sur'][n]) * np.array(inputs_opt['meters'][n]['l_sell'])
+                    ) *
+                    results['w_clustering']
+                ),
+                5
+            )
+        )
         # Using Networks Costs for self-consumption (through assets)
-        results['sc_tariff_cost'][n] = round(sum((np.array(results['e_slc_pool'][n]) * np.array(inputs_opt['l_grid'])) * results['w_clustering']), 5)
+        results['sc_tariff_cost'][n] = (
+            round(
+                sum(
+                    np.array(results['e_slc_pool'][n] * np.array(inputs_opt['l_grid'])) * results['w_clustering']),
+                5
+            )
+        )
         # Contracted Power Costs
-        results['contractedpower_cost'][n] = round(results['p_cont'][n] * inputs_opt['meters'][n]['l_cont'] * inputs_opt['nr_days_old'], 5)
+        results['contractedpower_cost'][n] = (
+            round(
+                results['p_cont'][n] * inputs_opt['meters'][n]['l_cont'] * inputs_opt['nr_days_old'],
+                5
+            )
+        )
         # Investment costs of individual and shared assets (CPE)
-        results['batteries_investments_cost'][n] = round(results['e_bn_new'][n] * inputs_opt['meters'][n]['l_bic'] * inputs_opt['nr_days_old'], 5)
-        results['PV_investments_cost'][n] = round(results['p_gn_new'][n] * inputs_opt['meters'][n]['l_gic'] * inputs_opt['nr_days_old'], 5)
-        # results['meter_cost'][n] = round(results['retailer_exchanges_cost'][n] + results['sc_tariff_cost'][n] + results['contractedpower_cost'][n] + results['batteries_investments_cost'][n] + results['PV_investments_cost'][n], 4)
+        results['batteries_investments_cost'][n] = (
+            round(
+                results['e_bn_new'][n] * inputs_opt['meters'][n]['l_bic'] * inputs_opt['nr_days_old'],
+                5
+            )
+        )
+        results['PV_investments_cost'][n] = (
+            round(
+                results['p_gn_new'][n] * inputs_opt['meters'][n]['l_gic'] * inputs_opt['nr_days_old'],
+                5
+            )
+        )
+        # results['meter_cost'][n] = (
+        #     round(
+        #         results['retailer_exchanges_cost'][n] +
+        #         results['sc_tariff_cost'][n] +
+        #         results['contractedpower_cost'][n] +
+        #         results['batteries_investments_cost'][n] +
+        #         results['PV_investments_cost'][n],
+        #         4
+        #     )
+        # )
 
     return results
+
 
 def post_processing_InternalMarket(results, inputs_opt):
     set_meters = list(inputs_opt['meters'])
@@ -52,7 +94,17 @@ def post_processing_InternalMarket(results, inputs_opt):
     # internal market compensations - Pool
     results['internal_market'] = {meter_id: None for meter_id in set_meters}
     for n in set_meters:
-        results['internal_market'][n] = round(sum((np.array(results['dual_prices']) * np.array(results['sold_position'][n])) * results['w_clustering']), 4)
+        results['internal_market'][n] = (
+            round(
+                sum(
+                    (
+                            np.array(results['dual_prices']) *
+                            np.array(results['sold_position'][n])) *
+                    results['w_clustering']
+                ),
+                4
+            )
+        )
     # validation of pool compensations
     if round(sum(results['internal_market'][n] for n in set_meters), 3) == 0:
         print('True: total costs internal market compensations = 0')
@@ -62,14 +114,22 @@ def post_processing_InternalMarket(results, inputs_opt):
     # installations costs with internal market compensations - Pool
     results['installation_cost_compensations'] = {meter_id: None for meter_id in set_meters}
     for n in set_meters:
-        results['installation_cost_compensations'][n] = round(results['c_ind2pool'][n] - results['internal_market'][n], 4)
+        results['installation_cost_compensations'][n] = (
+            round(
+                results['c_ind2pool'][n] -
+                results['internal_market'][n],
+                4
+            )
+        )
     # validation installation cost with internal market compensations
-    if round(results['obj_value'], 2) == round(sum(results['installation_cost_compensations'][n] for n in set_meters), 2):
+    if (round(results['obj_value'], 2) ==
+            round(sum(results['installation_cost_compensations'][n] for n in set_meters), 2)):
         print('True: total costs = sum of installations costs with compensations')
     else:
         print('False: total costs != sum of installations costs with compensations')
 
     return results
+
 
 def post_processing_members(results, inputs_pp):
     set_meters = list(inputs_pp['ownership'])
@@ -87,13 +147,39 @@ def post_processing_members(results, inputs_pp):
     for m in set_members:
         for n in set_meters:
             try:
-                results['member_cost_installation'][m][n] = round(results['c_ind2pool'][n] * inputs_pp['ownership'][n][m], 4)
-                results['member_cost_compensations_installation'][m][n] = round(results['installation_cost_compensations'][n] * inputs_pp['ownership'][n][m], 4)
+                results['member_cost_installation'][m][n] = (
+                    round(
+                        results['c_ind2pool'][n] * inputs_pp['ownership'][n][m],
+                        4
+                    )
+                )
+                results['member_cost_compensations_installation'][m][n] = (
+                    round(
+                        results['installation_cost_compensations'][n] * inputs_pp['ownership'][n][m],
+                        4
+                    )
+                )
             except:
                 pass
     for m in set_members:
-        results['member_cost'][m] = round(sum(results['member_cost_installation'][m][n] for n in results['member_cost_installation'][m].keys()), 4)
-        results['member_cost_compensations'][m] = round(sum(results['member_cost_compensations_installation'][m][n] for n in results['member_cost_compensations_installation'][m].keys()), 4)
+        results['member_cost'][m] = (
+            round(
+                sum(
+                    results['member_cost_installation'][m][n]
+                    for n in results['member_cost_installation'][m].keys()
+                ),
+                4
+            )
+        )
+        results['member_cost_compensations'][m] = (
+            round(
+                sum(
+                    results['member_cost_compensations_installation'][m][n]
+                    for n in results['member_cost_compensations_installation'][m].keys()
+                ),
+                4
+            )
+        )
 
     # validation member cost
     if round(results['obj_value'], 2) == round(sum(results['member_cost'][m] for m in set_members), 2):
@@ -101,13 +187,10 @@ def post_processing_members(results, inputs_pp):
     else:
         print('False: total costs != sum of members costs')
     # validation member cost with internal market compensations
-    if round(sum(results['installation_cost_compensations'][n] for n in set_meters), 2) == round(sum(results['member_cost_compensations'][m] for m in set_members), 2):
+    if (round(sum(results['installation_cost_compensations'][n] for n in set_meters), 2) ==
+            round(sum(results['member_cost_compensations'][m] for m in set_members), 2)):
         print('True: sum installations costs with compensations = sum of members costs with compensations')
     else:
         print('False: sum installations costs with compensations != sum of members costs with compensations')
 
     return results
-
-
-
-
