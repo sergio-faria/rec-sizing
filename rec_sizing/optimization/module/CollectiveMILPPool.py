@@ -310,24 +310,25 @@ class CollectiveMILPPool:
 			increment = f'{n}_t{t:07d}'
 
 			# Eq. 2
-			# UPDATED WITH DISAGREGGATED EWH MODULES (ORIGINAL AND OPTIMIZED LOADS)
-			self.milp += \
-				e_cmet[n][t] == \
-				self._e_c[n][t] - e_g[n][t] + e_bc[n][t] - e_bd[n][t], \
+			# UPDATED WITH DISAGGREGATED EWH MODULES (ORIGINAL AND OPTIMIZED LOADS)
+			self.milp += (
+				e_cmet[n][t] == self._e_c[n][t] - e_g[n][t] + e_bc[n][t] - e_bd[n][t],
 				'C_met_' + increment
+			)
 
 			# Eq. 3
-			match self.regulatory_context:
-				# Specific for the portuguese legislation
-				case "Portuguese":
-					self.milp += \
-						e_cmet[n][t] == e_sup[n][t] - e_sur[n][t] + e_slc[n][t] - e_sale[n][t], \
-						'Equilibrium_' + increment
+			if self.regulatory_context == "Portuguese":
+				# Specific for the Portuguese legislation
+				self.milp += (
+					e_cmet[n][t] == e_sup[n][t] - e_sur[n][t] + e_slc[n][t] - e_sale[n][t],
+					'Equilibrium_' + increment
+				)
+			else:
 				# General case (original formulation)
-				case _:
-					self.milp += \
-						e_cmet[n][t] == e_sup[n][t] - e_sur[n][t] + e_pur[n][t] - e_sale[n][t], \
-						'Equilibrium_' + increment
+				self.milp += (
+					e_cmet[n][t] == e_sup[n][t] - e_sur[n][t] + e_pur[n][t] - e_sale[n][t],
+					'Equilibrium_' + increment
+				)
 
 			# Eq. 4
 			self.milp += \

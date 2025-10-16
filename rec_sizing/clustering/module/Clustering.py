@@ -75,7 +75,13 @@ def clustering_kmedoids(inputs: BackpackKMedoids) -> OutputsKMedoids:
 
     # Normalize data of load and prices by scaling
     # each normalized value is now given by xnew = (x - xmin)/(xmax - x min)
-    def normalize_matrix(matrix: np.ndarray[np.ndarray[float]]) -> np.ndarray[np.ndarray[float]]:
+    def normalize_matrix(matrix: np.ndarray) -> np.ndarray:
+        """
+        Normalizes a NumPy 2D array to [0, 1].
+        If all values are equal, returns zeros.
+        :param matrix: 2D NumPy array
+        :return: normalized 2D NumPy array
+        """
         matrix_max = np.max(matrix)
         matrix_min = np.min(matrix)
         check_div_zero = matrix_max - matrix_min > 0
@@ -128,8 +134,14 @@ def clustering_kmedoids(inputs: BackpackKMedoids) -> OutputsKMedoids:
     rep_days_l_grid_normalized = rep_days_matrix[:, dn_limit_l_grid:up_limit_l_grid]
 
     # Revert normalization (scaling)
-    def denormalize_matrix(original_matrix: np.ndarray[np.ndarray[float]],
-                           normalized_matrix: np.ndarray[np.ndarray[float]]) -> np.ndarray[np.ndarray[float]]:
+    def denormalize_matrix(original_matrix: np.ndarray, normalized_matrix: np.ndarray) -> np.ndarray:
+        """
+        Denormalizes a normalized NumPy array back to the original scale.
+
+        :param original_matrix: original 2D NumPy array
+        :param normalized_matrix: normalized 2D NumPy array
+        :return: denormalized 2D NumPy array
+        """
         matrix_max = np.max(original_matrix)
         matrix_min = np.min(original_matrix)
         return normalized_matrix * (matrix_max - matrix_min) + matrix_min
