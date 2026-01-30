@@ -15,7 +15,7 @@ setup(
 		'pulp~=2.8.0',
 		'scikit-learn~=1.3.2',
 		'scikit-learn-extra~=0.3.0',
-		'setuptools~=68.0.0'
+		'setuptools~=75.3.2'
 	],
 	setup_requires=['pytest_runner==6.0.0'],
 	tests_require=['pytest==7.4.2'],
